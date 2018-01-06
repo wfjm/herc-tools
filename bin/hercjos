@@ -1,0 +1,458 @@
+#!/usr/bin/perl -w
+# $Id: hercjos 986 2018-01-06 13:41:50Z mueller $
+#
+# Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
+#
+# This program is free software; you may redistribute and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3, or at your option any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for complete details.
+#
+#  Revision History:
+# Date         Rev Version  Comment
+# 2018-01-06   986   1.1    Add job counter (for statistics)
+# 2017-09-01   945   1.0    Initial version
+# 2017-08-27   943   0.1    First draft
+#
+
+use 5.14.0;                                 # require Perl 5.14 or higher
+use strict;                                 # require strict checking
+use FileHandle;
+use IO::Socket::UNIX;
+use IO::Socket::INET;
+
+my %optdsc = ('-h'  => 0,                   # print help
+              '-i'  => 1,                   # specify input file
+              '-a'  => 1,                   # specify sockdev address
+              '-db' => 0,                   # drop banner page
+              '-dt' => 0,                   # drop trailer page
+              '-p'  => 1                    # specify filename pattern
+             );
+my %opt;
+
+my $defiport = '14030';
+
+my %jobid;
+my @page;
+my $npage  = 0;
+my $nline  = 0;
+my $npaged = 0;
+my $nlined = 0;
+my $ntotbyte = 0;
+my $ntotpage = 0;
+my $ntotline = 0;
+my $ntotjobs = 0;
+my $fh_out;
+my $fname;
+my $snum = 1;
+my %montab = ('JAN' =>  1, 'FEB' =>  2, 'MAR' =>  3, 'APR' =>  4,
+              'MAY' =>  5, 'JUN' =>  6, 'JUL' =>  7, 'AUG' =>  8,
+              'SEP' =>  9, 'OCT' => 10, 'NOV' => 11, 'DEC' => 12);
+
+# setup signal handlers
+sub catch_int;
+$SIG{INT} = \&catch_int;
+
+# handle options (and set defaults)
+$opt{'-a'}  = "localhost:$defiport";
+$opt{'-p'}  = '%D_%J_%N.prt';
+getopts();
+
+# handle help
+if (defined $opt{'-h'}) { do_help();  exit 0; }
+
+# check whether -p valid
+if ($opt{'-p'} =~ m{^/} || $opt{'-p'}=~ m{/$}) {
+  printf STDERR "hercjos-F filename pattern starts or ends with '/', abort\n";
+  exit 1;
+}
+
+# open connection to sockdev printer or file
+my $fh_in  = open_in();
+
+while (<$fh_in>) {
+  chomp;
+  unless (m/\f/) {                          # no ^L
+    do_line($_);
+  } else {                                  # ^L seen
+    my $rest = $_;
+    while (length($rest) > 0) {
+      if ($rest =~ m/\f/) {
+        $rest = $';
+        do_line($`) if length($`)>0;
+        do_page();
+      } else {
+        do_line($rest);
+        last;
+      }
+    }
+  }
+}
+do_page() if scalar(@page) && defined $fh_out;
+if ($ntotbyte) {
+  printf STDERR
+    "hercjos-I finished after %8d byte, %6d lines, %4d pages, %4d jobs\n",
+    $ntotbyte, $ntotline, $ntotpage, $ntotjobs;
+} else {
+  printf STDERR "hercjos-W finished without input. sockdev busy ??\n";
+}
+exit 0;
+
+#
+# -- catch_int: catcher for INT signal ---------------------------------------
+#
+
+sub catch_int {
+  printf STDERR "\nhercjos-F aborted with ^C\n";
+  exit 1;
+}
+
+#
+# -- getopts: handle options -------------------------------------------------
+#
+
+sub getopts {
+  while (scalar @ARGV) {
+    last unless ($ARGV[0] =~ m/^-/);
+    my $arg = shift @ARGV;
+    my $dsc = $optdsc{$arg};
+    if (defined $dsc) {
+      if ($dsc > 0) {
+        if (scalar @ARGV == 0) {
+          printf STDERR "hercjos-F missing argument after '$arg', abort\n";
+          exit 1;
+        }
+        $opt{$arg} = shift @ARGV;
+      } else {
+        $opt{$arg} = 1;
+      }
+    } else {
+      printf STDERR "hercjos-F invalid option '$arg', abort\n";
+      exit 1;
+    }
+  }
+  if (scalar(@ARGV)) {
+    printf STDERR "hercjos-F invalid additional argument '$ARGV[0]', abort\n";
+    exit 1;
+  }
+  return;
+}
+
+#
+# -- do_help: print help text ------------------------------------------------
+#
+
+sub do_help {
+  print "usage: hercjos [OPTIONS]...\n";
+  print "  -h             help text\n";
+  print "  -i file        use 'file' as input\n";
+  print "  -a [nam:]port  sockdev address, default localhost:$defiport\n";
+  print "  -db            drop banner pages\n";
+  print "  -dt            drop trailer pages\n";
+  print "  -p  pat        set filename pattern, default '%D_%J_%N.prt'\n";
+  return;
+}
+
+#
+# -- open_in: open connection to sockdev printer or input file ---------------
+#
+
+sub open_in {
+  if (defined $opt{'-i'}) {
+    if ($opt{'-i'} eq '-') {
+      return *STDIN;
+    } else {
+      my $fh = FileHandle->new($opt{'-i'}, '<');
+      return $fh if defined $fh;
+      printf STDERR "hercjos-E: failed to open '%s': %s\n", $opt{'-i'}, $!;
+    }
+
+  } else {
+    my $spec = $opt{'-a'};
+    my $nwait = 12;
+    my $fh;
+    while ($nwait > 0) {
+      if ($spec =~ m{^\.{0,2}/}) {
+        $fh = IO::Socket::UNIX->new(Peer => $spec);
+      } else {
+        if ($spec !~ m/:/) {                # no : found
+          if ($spec =~ m/\d+/) {            # only port
+            $spec = 'localhost:' . $spec;
+          } else {                          # only node
+            $spec = $spec . ':' . $defiport;
+          }
+        }
+        $fh = IO::Socket::INET->new(PeerAddr => $spec);
+      }
+      return $fh if defined $fh;
+      printf STDERR "hercjos-I: failed to connect to $spec, waiting...\n";
+      $nwait -= 1;
+      sleep 5.;
+    }
+    printf STDERR "hercjos-F: failed to connect to $spec: $!, abort\n";
+  }
+  exit 1;
+}
+
+#
+# -- do_line: process one line -----------------------------------------------
+#
+
+sub do_line {
+  my ($line) = @_;
+  $ntotline += 1;
+  $ntotbyte += length($line);
+  $line =~ s/\r$//;                         # drop trailing ^M
+  if ($line =~ m/\r/) {                     # handle embedded ^M (TODO)
+    # my $line1 = $line;
+    # $line1 =~ s/\r/^M/g;
+    # printf "+++1 '%s'\n", $line1;
+  }
+  push @page,$line;
+}
+
+#
+# -- do_page: process page end -----------------------------------------------
+#
+
+sub do_page {
+  $ntotpage += 1;
+  $ntotbyte += 1;
+  my $rc = chk_banner();
+  if ($rc == 1) {
+    $ntotjobs += 1;
+    printf STDERR "hercjos-I: head  '%s'\n", $jobid{summ};
+    close_out() if defined $fh_out;
+    $fh_out = open_outbp();
+    print_page($opt{'-db'});
+  } elsif ($rc == -1) {
+    if (defined $fh_out) {
+      print_page($opt{'-dt'});
+      close_out();
+    } else {
+      printf STDERR "hercjos-W: dropped orphaned trailer page\n";
+      print_page(1);
+    }
+  } else {
+    $fh_out = open_outnb() unless defined $fh_out;
+    print_page(0);
+  }
+  return;
+}
+
+#
+# -- chk_banner: check for banner/trailer page -------------------------------
+#
+
+sub chk_banner {
+  my $nl = scalar(@page);
+  return 0 if $nl < 4;
+  my $line = $page[$nl-1];
+  for (my $i=2; $i<=4; $i++) {
+    return 0 if $line ne $page[$nl-$i];
+  }
+
+  if ($line =~
+      m/^\*\*\*\*([A-Z])  ( END |START).*( END |START)  ([A-Z])\*\*\*\*$/) {
+    my $sysout   = $1;
+    my $sysout_e = $4;
+    my $pagtyp   = $2;
+    my $pagtyp_e = $3;
+    my $jobtyp   = substr $line, 14,3;
+    my $jobtyp_e = substr $line,110,3;
+    my $jobnum   = substr $line, 18,4;
+    my $jobnum_e = substr $line,113,4;
+    my $jobnam   = substr $line, 24,8;
+    my $prgnam   = substr $line, 34,20;
+    my $tim_hr   = substr $line, 67,2;
+    my $tim_mi   = substr $line, 70,2;
+    my $tim_se   = substr $line, 73,2;
+    my $tim_am   = substr $line, 76,2;
+    my $tim_da   = substr $line, 79,2;
+    my $tim_mo   = substr $line, 82,3;
+    my $tim_yr   = substr $line, 86,3;
+    my $ptrnam   = substr $line, 90,8;
+    my $sysnam   = substr $line,100,8;
+    if ($sysout eq $sysout_e ||
+        $pagtyp eq $pagtyp_e ||
+        $jobtyp eq $jobtyp_e ||
+        $jobnum eq $jobnum_e) {
+      my $tim = '';
+      $tim .= sprintf "%04d",int($tim_yr)+2000;
+      $tim .= '-';
+      $tim .= sprintf "%02d",mon2num($tim_mo);
+      $tim .= '-';
+      $tim .= sprintf "%02d",int($tim_da);
+      $tim .= '-';
+      my $hr = int($tim_hr);
+      $hr  = 0 if $hr == 12;
+      $hr +=12 if $tim_am eq 'PM';
+      $tim .= sprintf "%02d",$hr;
+      $tim .= ':';
+      $tim .= sprintf "%02d",int($tim_mi);
+      $tim .= ':';
+      $tim .= sprintf "%02d",int($tim_se);
+
+      $jobid{line}  = $line;
+      $jobid{summ}  = $sysout . ' ' . $jobtyp . ' ' . $jobnum . ' ' .
+                      $jobnam . ' ' . $prgnam . ' ' . $tim;
+
+      $jobid{T} = sanistr($jobtyp);                               # %T job type
+      $jobid{J} = substr($jobtyp,0,1) . sprintf "%04d",$jobnum;   # %J job number
+      $jobid{N} = sanistr($jobnam);                               # %N job name
+      $jobid{U} = sanistr($prgnam);                               # %U user name
+      $jobid{P} = sanistr($ptrnam);                               # %P printer
+      $jobid{D} = $tim;                                           # %D date/time
+
+      return ($pagtyp eq 'START') ? 1 : -1;
+    }
+  }
+  return 0;
+}
+
+#
+# -- open_outbp: open output file --------------------------------------------
+#
+
+sub open_outbp {
+  # create filename
+  $fname = '';
+  my $rest = $opt{'-p'};
+  while ($rest ne "") {
+    if ($rest =~ m/^(.*?)%([DJNPTU])(.*)$/) {
+      $fname .= $1;
+      $rest   = $3;
+      my $tag = $2;
+      $fname .= defstr($jobid{$tag});
+    } else {
+      $fname .= $rest;
+      last;
+    }
+  }
+
+  # check whether directories must be created
+  if ($fname =~ m{/}) {                     # at least one / in fname
+    my @plist = split /\//, './' . $fname;
+    pop @plist;                             # remove last element (the name)
+    my $dpath = '';
+    foreach (@plist) {
+      $dpath .= $_ . '/';
+      unless (-d $dpath) {
+        printf STDERR "hercjos-I: create directory '%s'\n", $dpath;
+        unless (mkdir $dpath) {
+          printf STDERR "hercjos-E: failed to mkdir '%s':%s\n", $dpath,$!;
+          last;
+        }
+      }
+    }
+  }
+
+  # open file
+  my $mode = (-e $fname) ? 'overw' : 'write';
+  my $fh = FileHandle->new($fname, '>');
+  if (defined $fh) {
+    printf STDERR "hercjos-I: %s '%s'\n", $mode, $fname;
+    return $fh;
+  } else {
+    printf STDERR "hercjos-E: failed to open '%s': %s\n", $fname, $!;
+  }
+  printf STDERR "hercjos-I: write to generic file instead\n";
+  $fh = open_outnb();
+  return $fh;
+}
+
+#
+# -- open_outnb: open output file (no banner found) --------------------------
+#
+
+sub open_outnb {
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+  $fname = sprintf "%04d-%02d-%02d-%02d:%02d:%02d-SEQ%04d.prt",
+                   $year+1900,$mon+1,$mday,$hour,$min,$sec,$snum;
+  $snum += 1;
+  my $mode = (-e $fname) ? 'overw' : 'write';
+  my $fh =FileHandle->new($fname, '>');
+  if (defined $fh) {
+    printf STDERR "hercjos-I: %s '%s'\n", $mode, $fname;
+    return $fh;
+  }
+  printf STDERR "hercjos-F: failed to open '%s': %s\n", $fname, $!;
+  exit 1;
+}
+
+#
+# -- close_out: close output file --------------------------------------------
+#
+
+sub close_out {
+  printf STDERR
+    "hercjos-I: close written %3dp, %5dl; dropped %3dp, %5dl\n",
+    $npage,$nline,$npaged,$nlined;
+  $fh_out->close();
+  undef $fh_out;
+  undef $fname;
+  $npage  = 0;
+  $nline  = 0;
+  $npaged = 0;
+  $nlined = 0;
+  return;
+}
+
+#
+# -- print_page: print a page ------------------------------------------------
+#
+
+sub print_page {
+  my ($drop) = @_;
+  if ($drop) {
+    $npaged += 1;
+    $nlined += scalar(@page);
+  } else {
+    print $fh_out "\f\n" if $npage >= 1;
+    foreach my $line (@page) {
+      print $fh_out $line . "\n";
+    };
+    $fh_out->flush();
+    $npage  += 1;
+    $nline  += scalar(@page);
+  }
+  @page = ();
+  return;
+}
+
+#
+# -- defstr: convert undef to '' ---------------------------------------------
+#
+
+sub defstr {
+  my ($txt) = @_;
+  $txt = '' unless defined $txt;
+  return $txt;
+}
+
+#
+# -- sanistr: sanitize string ------------------------------------------------
+#
+
+sub sanistr {
+  my ($txt) = @_;
+  $txt =~ s/\#/-/g;                         # map # -> -
+  $txt =~ s/\@/-/g;                         # map @ -> -
+  $txt =~ s/\$/-/g;                         # map $ -> -
+  $txt =~ s/[^A-Za-z0-9-]//g;
+  return $txt;
+}
+
+#
+# -- mon2num: month name to number -------------------------------------------
+#
+
+sub mon2num {
+  my ($mon) = @_;
+  return $montab{$mon} if exists $montab{$mon};
+  return 'xx';
+}

@@ -1,0 +1,170 @@
+#!/usr/bin/perl -w
+# $Id: hercjsu 960 2017-11-11 22:16:56Z mueller $
+#
+# Copyright 2017- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
+#
+# This program is free software; you may redistribute and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3, or at your option any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for complete details.
+#
+#  Revision History:
+# Date         Rev Version  Comment
+# 2017-10-21   957   0.1    First draft
+#
+# This script analyses JES2 job outputs as found in tk4- .
+# It extracts information from the IEF403I to IEF404I header of the format
+#             1         2         3         4         5         6
+#   0123456789012345678901234567890123456789012345678901234567890123456789
+#   08.02.25 JOB  353  IEF403I PERF#ASM - STARTED - TIME=08.02.25
+#   08.02.27 JOB  353  IEFACTRT - Stepname  Procstep  Program   Retcode
+#   08.02.27 JOB  353  PERF#ASM   CLG       ASM       IFOX00    RC= 0000
+#   08.02.28 JOB  353  PERF#ASM   CLG       LKED      IEWL      RC= 0000
+#   08.03.52 JOB  353  PERF#ASM   CLG       GO        PGM=*.DD  RC= 0000
+#   23.37.11 JOB  522  HEWO#ASM   CLG       GO        PGM=*.DD  AB S0C4
+#   08.03.52 JOB  353  IEF404I PERF#ASM - ENDED - TIME=08.03.52
+#
+# and from the job step info blocks of the format (blanks removed):
+#
+#   ****************************************************************************
+#   *   3. Jobstep of job: PERF#ASM   Stepname: GO   Program name: PGM=*.DD .. *
+#   *      elapsed time  00:01:24,43    CPU-Identifier:   TK4- Page-in:      0 *
+#   *      CPU time  00:01:24,31  Virtual Storage used:   32K   Page-out:    0 *
+#   *....                                                                      *
+#   ****************************************************************************
+#
+# Examples:
+#   hercjsu --fail  *_J*.prt
+#   hercjsu --step=GO --nofile *_J*.prt
+#   hercjsu --job="TOWH#.CC" *_J*.prt
+#   hercjsu --job="HEWO#.*" --step=GO --nofile *_J*.prt
+#
+
+use 5.14.0;                                 # require Perl 5.14 or higher
+use strict;                                 # require strict checking
+use Getopt::Long;
+
+my %opts = ();
+
+GetOptions(\%opts, "help","nofile","fail",
+                   "job=s","step=s")
+  or die "bad options";
+
+# handle help
+if (defined $opts{'help'}) { do_help();  exit 0; }
+
+#
+# handle input files
+#
+
+foreach my $fname (@ARGV) {
+  do_file($fname);
+}
+
+exit 0;
+
+#
+# -- do_help: print help text ------------------------------------------------
+#
+sub do_help {
+  print "usage: hercjsu [OPTIONS]... [FILE]...\n";
+  print "  --job=jnam    show only jobs with given job name\n";
+  print "  --step=snam   show only steps with given step name\n";
+  print "  --fail        show jobs with failed steps (RC > 4 or ABEND)\n";
+  print "  --nofile      don't print file name header\n";
+  return;
+}
+
+#
+# -- do_file: handle input file ----------------------------------------------
+#
+
+sub do_file {
+  my ($fname) = @_;
+  open IFILE,"<$fname" or die "failed to open $fname";
+
+  my $jnum;
+  my $jnam;
+  while (<IFILE>) {
+    if (m/^[0-9.]+\s+JOB\s+(\d+)\s+IEF403I\s+(.*?)\s+/) {
+      $jnum = $1;
+      $jnam = $2;
+      last;
+    }
+  }
+  unless (defined $jnum && defined $jnam) {
+    print "hercjsu-E failed to detect IEF403I in $fname\n";
+    close IFILE;
+    return;
+  }
+
+  # quit if --job option seen and jobname doesn't match
+  if (defined $opts{job} && $jnam !~ m/^$opts{job}$/) {
+    close IFILE;
+    return;
+  }
+
+  my @steps;
+
+  while (<IFILE>) {
+    if (m/^[0-9.]+\s+JOB\s+$jnum\s+$jnam\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*)/) {
+      push @steps,{snam => $1, psnam => $2, prog => $3, rcod => $4};
+    }
+    last if m/^[0-9.]+\s+JOB\s+(\d+)\s+IEF404I\s+(.*?)\s+/;
+  }
+
+  my $cstep = undef;
+  while (<IFILE>) {
+    last if m/^IEF375I/;
+    if (m/^\*+$/) {
+      $cstep = undef;
+      next;
+    }
+    if (m/^\*\s+(\d+)\. Jobstep.*Stepname:\s+(.*?)\s+/) {
+      $cstep = $1-1;
+    }
+    next unless defined $cstep;
+    if (m/^\*\s+elapsed time\s+(.*?)\s+Page-in:\s+(.*?)\s+/) {
+      $steps[$cstep]->{etim} = $1;
+      $steps[$cstep]->{pgin} = $2;
+    }
+    if (m/^\*\s+CPU time\s+(.*?)\s+Virtual Storage used:\s+(.*?)\s+/) {
+      $steps[$cstep]->{ctim} = $1;
+      $steps[$cstep]->{vmem} = $2;
+    }
+  }
+
+  my $fail = 0;
+  foreach my $sdsc (@steps) {
+    if (defined $opts{fail}) {
+       $fail = 1 if $sdsc->{rcod} ne "RC= 0000" && $sdsc->{rcod} ne "RC= 0004"
+    }
+  }
+
+  if (defined $opts{fail} && not $fail) {
+    close IFILE;
+    return;
+  }
+
+  print "$fname:\n" unless defined $opts{nofile};
+
+  foreach my $sdsc (@steps) {
+    # quit if --step option seen and stepname doesn't match
+    next if defined $opts{step} && $sdsc->{psnam} !~ m/^$opts{step}$/;
+    $sdsc->{ctim} = "?" unless defined $sdsc->{ctim};
+    $sdsc->{vmem} = "?" unless defined $sdsc->{vmem};
+    $sdsc->{pgin} = "?" unless defined $sdsc->{pgin};
+    printf "  J%04d %-8s %-8s %-8s %-8s  %-8s  %11s  %5s %6s\n",
+      $jnum,$jnam,
+      $sdsc->{snam},$sdsc->{psnam},$sdsc->{prog},$sdsc->{rcod},
+      $sdsc->{ctim},$sdsc->{vmem},$sdsc->{pgin};
+  }
+
+  close IFILE;
+  return;
+}
+
