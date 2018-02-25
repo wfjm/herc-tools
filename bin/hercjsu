@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 960 2017-11-11 22:16:56Z mueller $
+# $Id: hercjsu 991 2018-01-28 18:24:38Z mueller $
 #
 # Copyright 2017- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -55,7 +55,7 @@ GetOptions(\%opts, "help","nofile","fail",
   or die "bad options";
 
 # handle help
-if (defined $opts{'help'}) { do_help();  exit 0; }
+if (defined $opts{help}) { do_help();  exit 0; }
 
 #
 # handle input files
