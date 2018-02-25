@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjos 986 2018-01-06 13:41:50Z mueller $
+# $Id: hercjos 994 2018-02-24 13:07:45Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-02-23   994   1.1.1  Handle ^L^M properly
 # 2018-01-06   986   1.1    Add job counter (for statistics)
 # 2017-09-01   945   1.0    Initial version
 # 2017-08-27   943   0.1    First draft
@@ -76,6 +77,7 @@ my $fh_in  = open_in();
 
 while (<$fh_in>) {
   chomp;
+  s/\f\r/\f/;                               # ^L^M --> ^L
   unless (m/\f/) {                          # no ^L
     do_line($_);
   } else {                                  # ^L seen
