@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 991 2018-01-28 18:24:38Z mueller $
+# $Id: hercjsu 1008 2018-04-07 15:52:03Z mueller $
 #
-# Copyright 2017- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
+# Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
 # This program is free software; you may redistribute and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-01-28   991   1.0    Initial version
 # 2017-10-21   957   0.1    First draft
 #
 # This script analyses JES2 job outputs as found in tk4- .

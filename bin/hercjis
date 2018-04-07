@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjis 988 2018-01-13 13:34:57Z mueller $
+# $Id: hercjis 1008 2018-04-07 15:52:03Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -182,12 +182,12 @@ sub getopts {
 sub do_help {
   print "usage: hercjis [OPTIONS]... [FILE]...\n";
   print "  -a [nam:]port  sockdev address, default localhost:$defoport\n";
-  print "  -o file        convert one deck, write to 'file'\n";
+  print "  -o file        build job(s) and write to 'file'\n";
   print "  -d nam=val     define default for \${nam} substitution\n";
   print "  -D nam=val     define override for \${nam} substitution\n";
   print "  -c x           short cut for -D CLASS=x\n";
   print "  -r nn          repeat jobs nn times (only for FILE input)\n";
-  print "  -f             run as filter (read stdin, write stdout)\n";
+  print "  -f             run as filter (read STDIN, write STDOUT)\n";
   print "  -v             verbose, trace files, print statistics\n";
   print "  -M             output Makefile dependencies to STDOUT\n";
   print "  -w ns          wait ns seconds after command\n";
@@ -196,6 +196,7 @@ sub do_help {
   print "  //** ##include  fname       ;fnames relative to CWD \n";
   print "  //** ##rinclude fname       ;fnames relative to including file\n";
   print "  //** ##define   name value\n";
+  print "  //** /*......   comment\n";
   print "variable substitution syntax (shell style):\n";
   print '  ${name}        fails if name not defined'."\n";
   print '  ${name:=def}   if name undefined, use val, define name'."\n";
