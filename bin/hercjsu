@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 1008 2018-04-07 15:52:03Z mueller $
+# $Id: hercjsu 1010 2018-04-14 08:30:38Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-04-13  1010   1.1    add -cfrac option
 # 2018-01-28   991   1.0    Initial version
 # 2017-10-21   957   0.1    First draft
 #
@@ -51,7 +52,7 @@ use Getopt::Long;
 
 my %opts = ();
 
-GetOptions(\%opts, "help","nofile","fail",
+GetOptions(\%opts, "help","nofile","fail","cfrac",
                    "job=s","step=s")
   or die "bad options";
 
@@ -76,6 +77,7 @@ sub do_help {
   print "  --job=jnam    show only jobs with given job name\n";
   print "  --step=snam   show only steps with given step name\n";
   print "  --fail        show jobs with failed steps (RC > 4 or ABEND)\n";
+  print "  --cfrac       show CPU in seconds and CPU/elapsed ratio\n";
   print "  --nofile      don't print file name header\n";
   return;
 }
@@ -156,16 +158,44 @@ sub do_file {
   foreach my $sdsc (@steps) {
     # quit if --step option seen and stepname doesn't match
     next if defined $opts{step} && $sdsc->{psnam} !~ m/^$opts{step}$/;
+
+
+    printf "  J%04d %-8s %-8s %-8s %-8s  %-8s",
+        $jnum,$jnam,
+        $sdsc->{snam},$sdsc->{psnam},$sdsc->{prog},$sdsc->{rcod};
+
     $sdsc->{ctim} = "?" unless defined $sdsc->{ctim};
     $sdsc->{vmem} = "?" unless defined $sdsc->{vmem};
     $sdsc->{pgin} = "?" unless defined $sdsc->{pgin};
-    printf "  J%04d %-8s %-8s %-8s %-8s  %-8s  %11s  %5s %6s\n",
-      $jnum,$jnam,
-      $sdsc->{snam},$sdsc->{psnam},$sdsc->{prog},$sdsc->{rcod},
-      $sdsc->{ctim},$sdsc->{vmem},$sdsc->{pgin};
+    unless ($opts{cfrac}) {
+      printf "  %11s  %5s %6s\n", $sdsc->{ctim},$sdsc->{vmem},$sdsc->{pgin};
+    } else {
+      $sdsc->{etim} = "?" unless defined $sdsc->{etim};
+      my $ctim = cnvtim($sdsc->{ctim});
+      my $etim = cnvtim($sdsc->{etim});
+      my $ctxt = defined $ctim ? sprintf '%8.2fs',$ctim : '?';
+      my $crat = '?';
+      if (defined $ctim && defined $etim) {
+        $crat = $etim > 0 ? sprintf '%6.2f%%',100.*$ctim/$etim : '100.00%';
+      }
+      printf "  %9s %7s  %5s\n",$ctxt,$crat,$sdsc->{vmem};
+    }
   }
 
   close IFILE;
   return;
 }
 
+#
+# -- cnvtime : helper to convert hh:mm:ss,ss into a float
+#
+
+sub cnvtim {
+  my ($txttim) = @_;
+  return undef unless $txttim =~ m/(\d\d):(\d\d):(\d\d),(\d\d)/;
+  my $hh = $1;
+  my $mm = $2;
+  my $ss = $3;
+  my $sf = $4;
+  return 3600.*$hh + 60.*$mm + $ss + 0.01*$sf;
+}

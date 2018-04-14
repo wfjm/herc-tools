@@ -23,7 +23,7 @@ distributed in the [tk4-](http://wotho.ethz.ch/tk4-/) system and
 extracts information from the `IEF403I` to `IEF404I` section and from
 the `Jobstep` box.
 
-If used without filters the output has the form
+If used without filters and options the output has the form
 ```
 2018-04-07-09:16:24_J0049_PERF-ASM.prt:
   J0049 PERF#ASM CLG      ASM      IFOX00    RC= 0000  00:00:04,36  2108K      0
@@ -37,9 +37,29 @@ listing the input file name, and for each job step
 - step name
 - step program
 - step return code
-- step CPU time
+- step CPU time in hh:mm:ss.ss format
 - step virtual storage used
 - step Page-in count
+
+The GO step information is sometimes missing in the output, e.g. for GO steps
+with very small CPU time. In this case the last three columns contain a `?`.
+
+When the [--cfrac option](#user-content-opt-cfrac) is used the output format
+changes to
+```
+2018-04-07-09:16:24_J0049_PERF-ASM.prt:
+  J0049 PERF#ASM CLG      ASM      IFOX00    RC= 0000      4.36s  91.21%  2108K
+  J0049 PERF#ASM CLG      LKED     IEWL      RC= 0000      1.08s  81.82%   504K
+  J0049 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000    279.53s  99.89%   120K
+```
+
+and the last three columns show
+- step CPU time in seconds
+- step CPU/elapsed time ratio
+- step virtual storage used
+
+Note that on system with multiple CPUs, like a dual CPU MVS 3.8J system, the
+CPU time can be larger than the elapsed time, so the ratio be larger than 100%.
 
 
 ### Options <a name="options"></a>
@@ -49,7 +69,8 @@ listing the input file name, and for each job step
 | [--job=jnam](#user-content-opt-job) | show only jobs with given job name |
 | [--step=snam](#user-content-opt-step) | show only steps with given step name |
 | [--fail](#user-content-opt-fail)    | show jobs with failed steps |
-| [--nofile](#user-content-opt-nofile) | don't print file name header  |
+| [--nofile](#user-content-opt-nofile) | don't print file name header |
+| [--cfrac](#user-content-opt-cfrac) | show CPU time and CPU/elapsed ratio |
 | [--help](#user-content-opt-help)     | print help text |
 
 #### --job=jname <a name="opt-job"></a>
@@ -77,6 +98,10 @@ Suppresses the file name header. Is especially useful when the
 [--step option](#user-content-opt-step) is used and results in very
 compact listings.
 
+#### --cfrac <a name="opt-cfrac"></a>
+Show the CPU time in seconds and the CPU/elapsed time ratio and omit the Page-in
+count in the output format.
+
 #### --help <a name="opt-help"></a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
@@ -91,10 +116,14 @@ hercjsu --step=GO --nofile *_J*.prt
 ```
 which generates output like
 ```
-  J0032 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:37,26   120K      0
-  J0033 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:44,25   120K      0
-  J0034 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:36,86   120K      0
-...
-  J0060 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:37,08   120K      0
-  J0061 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:37,13   120K      0
+  J6373 TOWH#A60 CLG      GO       GO        RC= 0000    260.46s  99.93%    32K
+  J6374 TOWH#ASM CLG      GO       PGM=*.DD  RC= 0000      5.01s 100.00%     8K
+  J6375 TOWH#FOG CLG      GO       PGM=*.DD  RC= 0000     15.35s  99.80%    28K
+  J6376 TOWH#FOH CLG      GO       PGM=*.DD  RC= 0000      9.27s  99.78%    28K
+  J6377 TOWH#FOW CLG      GO       WATFIV    RC= 0000     93.26s  99.85%   256K
+  J6378 TOWH#GCC CLG      GO       PGM=*.DD  RC= 0000      9.06s  99.78%   444K
+  J6379 TOWH#JCC CLG      GO       GO        RC= 0000      9.14s  99.78%   424K
+  J6380 TOWH#PAS CLG      GO       PGM=*.DD  RC= 0000      7.36s  99.19%   576K
+  J6381 TOWH#PLI CLG      GO       PGM=*.DD  RC= 0000     56.74s  99.91%    48K
+  J6382 TOWH#SIM CLG      GO       PGM=*.DD  RC= 0000     34.53s  99.91%  1000K
 ```
