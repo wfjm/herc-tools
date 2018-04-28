@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 1010 2018-04-14 08:30:38Z mueller $
+# $Id: hercjsu 1013 2018-04-28 16:07:34Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-04-28  1013   1.2    add -asum and -osum
 # 2018-04-13  1010   1.1    add -cfrac option
 # 2018-01-28   991   1.0    Initial version
 # 2017-10-21   957   0.1    First draft
@@ -52,7 +53,7 @@ use Getopt::Long;
 
 my %opts = ();
 
-GetOptions(\%opts, "help","nofile","fail","cfrac",
+GetOptions(\%opts, "help","nofile","fail","cfrac","asum","osum",
                    "job=s","step=s")
   or die "bad options";
 
@@ -62,9 +63,37 @@ if (defined $opts{help}) { do_help();  exit 0; }
 #
 # handle input files
 #
-
+my %stephash;
 foreach my $fname (@ARGV) {
   do_file($fname);
+}
+
+# handle -asum and -osum
+if ($opts{asum} || $opts{osum}) {
+  print "\n";
+  print "  jobname   stepname   ns        CPU    C-w50    elapsed    e-w50  CPU/ela\n";
+  foreach my $steptag (sort keys %stephash) {
+    my ($jnam,$stepno,$psnam) = split '\|', $steptag;
+    my @ctimsort = sort @{$stephash{$steptag}{ctim}};
+    my @etimsort = sort @{$stephash{$steptag}{etim}};
+    next unless scalar(@ctimsort) > 0 && scalar(@etimsort) > 0;
+
+    my $ctim_l = df_lookup(\@ctimsort, 0.25);
+    my $ctim_t = df_lookup(\@ctimsort, 0.50);
+    my $ctim_u = df_lookup(\@ctimsort, 0.75);
+    my $etim_l = df_lookup(\@etimsort, 0.25);
+    my $etim_t = df_lookup(\@etimsort, 0.50);
+    my $etim_u = df_lookup(\@etimsort, 0.75);
+    ## printf "+++2a $ctim_l, $ctim_t, $ctim_u\n";
+    ## printf "+++2b $etim_l, $etim_t, $etim_u\n";
+    my $ctim_w = 100.* ($ctim_u - $ctim_l) / $ctim_t;
+    my $etim_w = 100.* ($etim_u - $etim_l) / $etim_t;
+    printf "  %-8s  %-8s  %3d  %8.2fs  %6.2f%%  %8.2fs  %6.2f%%  %6.2f%%  \n",
+      $jnam,$psnam,scalar(@ctimsort),
+      $ctim_t,$ctim_w,
+      $etim_t,$etim_w,
+      100.*$ctim_t/$etim_t;
+  }
 }
 
 exit 0;
@@ -79,6 +108,8 @@ sub do_help {
   print "  --fail        show jobs with failed steps (RC > 4 or ABEND)\n";
   print "  --cfrac       show CPU in seconds and CPU/elapsed ratio\n";
   print "  --nofile      don't print file name header\n";
+  print "  --asum        add job/step average times\n";
+  print "  --osum        show only job/step average times\n";
   return;
 }
 
@@ -153,33 +184,42 @@ sub do_file {
     return;
   }
 
-  print "$fname:\n" unless defined $opts{nofile};
+  print "$fname:\n" unless $opts{nofile} || $opts{osum};
 
+  my $stepno = 1;
   foreach my $sdsc (@steps) {
     # quit if --step option seen and stepname doesn't match
     next if defined $opts{step} && $sdsc->{psnam} !~ m/^$opts{step}$/;
 
-
-    printf "  J%04d %-8s %-8s %-8s %-8s  %-8s",
-        $jnum,$jnam,
-        $sdsc->{snam},$sdsc->{psnam},$sdsc->{prog},$sdsc->{rcod};
-
     $sdsc->{ctim} = "?" unless defined $sdsc->{ctim};
     $sdsc->{vmem} = "?" unless defined $sdsc->{vmem};
     $sdsc->{pgin} = "?" unless defined $sdsc->{pgin};
-    unless ($opts{cfrac}) {
-      printf "  %11s  %5s %6s\n", $sdsc->{ctim},$sdsc->{vmem},$sdsc->{pgin};
-    } else {
-      $sdsc->{etim} = "?" unless defined $sdsc->{etim};
-      my $ctim = cnvtim($sdsc->{ctim});
-      my $etim = cnvtim($sdsc->{etim});
-      my $ctxt = defined $ctim ? sprintf '%8.2fs',$ctim : '?';
-      my $crat = '?';
-      if (defined $ctim && defined $etim) {
-        $crat = $etim > 0 ? sprintf '%6.2f%%',100.*$ctim/$etim : '100.00%';
+
+    my $ctim = cnvtim($sdsc->{ctim});
+    my $etim = cnvtim($sdsc->{etim});
+
+    unless ($opts{osum}) {
+      printf "  J%04d %-8s %-8s %-8s %-8s  %-8s",
+        $jnum,$jnam,
+        $sdsc->{snam},$sdsc->{psnam},$sdsc->{prog},$sdsc->{rcod};
+
+      unless ($opts{cfrac}) {
+        printf "  %11s  %5s %6s\n", $sdsc->{ctim},$sdsc->{vmem},$sdsc->{pgin};
+      } else {
+        $sdsc->{etim} = "?" unless defined $sdsc->{etim};
+        my $ctxt = defined $ctim ? sprintf '%8.2fs',$ctim : '?';
+        my $crat = '?';
+        if (defined $ctim && defined $etim) {
+          $crat = $etim > 0 ? sprintf '%6.2f%%',100.*$ctim/$etim : '100.00%';
+        }
+        printf "  %9s %7s  %5s\n",$ctxt,$crat,$sdsc->{vmem};
       }
-      printf "  %9s %7s  %5s\n",$ctxt,$crat,$sdsc->{vmem};
     }
+
+    my $steptag = $jnam . '|' . sprintf('%03d',$stepno) . '|' . $sdsc->{psnam};
+    push @{$stephash{$steptag}{ctim}}, $ctim if defined $ctim;
+    push @{$stephash{$steptag}{etim}}, $etim if defined $etim;
+    $stepno += 1;
   }
 
   close IFILE;
@@ -192,6 +232,7 @@ sub do_file {
 
 sub cnvtim {
   my ($txttim) = @_;
+  return undef unless defined $txttim;
   return undef unless $txttim =~ m/(\d\d):(\d\d):(\d\d),(\d\d)/;
   my $hh = $1;
   my $mm = $2;
@@ -199,3 +240,20 @@ sub cnvtim {
   my $sf = $4;
   return 3600.*$hh + 60.*$mm + $ss + 0.01*$sf;
 }
+
+#
+# -- df_lookup: lookup df ----------------------------------------------------
+#
+sub df_lookup {
+  my ($df,$frac) = @_;
+  my $nval = scalar(@{$df});
+  return 0.        if $nval == 0;
+  return $df->[0]  if $nval == 1;
+  my $imax = $nval - 1;
+  my $rind = $frac * $imax;
+  my $ind  = int $rind;
+  return $df->[$ind] if $ind == $imax;
+  my $find = $rind - $ind;
+  return (1.-$find)*$df->[$ind] + $find*$df->[$ind+1];
+}
+

@@ -31,6 +31,14 @@ If used without filters and options the output has the form
   J0049 PERF#ASM CLG      GO       PGM=*.DD  RC= 0000  00:04:39,53   120K      0
 ```
 
+or for a less lucky job
+```
+2017-09-16-23:01:41_J0515_HEWO-ASM.prt:
+  J0515 HEWO#ASM CLG      ASM      IFOX00    RC= 0000  00:00:00,20   128K      0
+  J0515 HEWO#ASM CLG      LKED     IEWL      RC= 0016  00:00:00,01   128K      0
+  J0515 HEWO#ASM CLG      GO       PGM=*.DD  *FLUSH*             ?      ?      ?
+```
+
 listing the input file name, and for each job step
 - job number
 - job name
@@ -66,11 +74,13 @@ CPU time can be larger than the elapsed time, so the ratio be larger than 100%.
 
 | Option | Description |
 | ------ | :---------- |
-| [--job=jnam](#user-content-opt-job) | show only jobs with given job name |
+| [--job=jnam](#user-content-opt-job)  | show only jobs with given job name |
 | [--step=snam](#user-content-opt-step) | show only steps with given step name |
-| [--fail](#user-content-opt-fail)    | show jobs with failed steps |
+| [--fail](#user-content-opt-fail)     | show jobs with failed steps |
 | [--nofile](#user-content-opt-nofile) | don't print file name header |
-| [--cfrac](#user-content-opt-cfrac) | show CPU time and CPU/elapsed ratio |
+| [--cfrac](#user-content-opt-cfrac)   | show CPU time and CPU/elapsed ratio |
+| [--asum](#user-content-opt-asum)     | add job/step average times |
+| [--osum](#user-content-opt-osum)     | show only job/step average times |
 | [--help](#user-content-opt-help)     | print help text |
 
 #### --job=jname <a name="opt-job"></a>
@@ -101,6 +111,27 @@ compact listings.
 #### --cfrac <a name="opt-cfrac"></a>
 Show the CPU time in seconds and the CPU/elapsed time ratio and omit the Page-in
 count in the output format.
+
+#### --asum <a name="opt-asum"></a>
+Adds at end of output a job/step summary of the format
+```
+  jobname   stepname   ns        CPU    C-w50    elapsed    e-w50  CPU/ela
+  PERF#ASM  ASM        31      3.04s    4.11%      3.27s    6.57%   92.97%  
+  PERF#ASM  LKED       31      0.75s   16.00%      0.89s   19.10%   84.27%  
+  PERF#ASM  GO         31    344.18s    1.16%    344.48s    1.14%   99.91%  
+```
+
+showing for each jobname/stepname combination found
+- number of steps seen
+- [median](https://en.wikipedia.org/wiki/Median) value of CPU time
+- 50% width of CPU time distribution
+- [median](https://en.wikipedia.org/wiki/Median) value of elapsed time
+- 50% width of elapsed time distribution
+- ratio of CPU time to elapsed time
+
+#### --osum <a name="opt-osum"></a>
+Prints only the job/step summary decribed for the
+[-asum option](#user-content-opt-asum), all other output is suppressed.
 
 #### --help <a name="opt-help"></a>
 Print a brief help text and exit.
