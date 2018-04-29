@@ -6,6 +6,7 @@
 - [Description](#user-content-description)
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
+- [See also](#user-content-also)
 
 ### Synopsis <a name="synopsis"></a>
 ```
@@ -123,3 +124,7 @@ hercjos-I: write '2018-04-07-12:00:13_S0047_TSO.prt'
 hercjos-I: close written   1p,    30l; dropped   2p,    66l
 hercjos-I finished after  1685474 byte,  23677 lines,  516 pages,   48 jobs
 ```
+
+### See also <a name="also"></a>
+- [hercjis](hercjis.md) - Hercules Job Input System 
+- [hercjsu](hercjsu.md) - Job Summary 

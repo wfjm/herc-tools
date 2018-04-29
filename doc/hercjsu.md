@@ -6,6 +6,7 @@
 - [Description](#user-content-description)
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
+- [See also](#user-content-also)
 
 ### Synopsis <a name="synopsis"></a>
 ```
@@ -115,19 +116,28 @@ count in the output format.
 #### --asum <a name="opt-asum"></a>
 Adds at end of output a job/step summary of the format
 ```
-  jobname   stepname   ns        CPU    C-w50    elapsed    e-w50  CPU/ela
-  PERF#ASM  ASM        31      3.04s    4.11%      3.27s    6.57%   92.97%  
-  PERF#ASM  LKED       31      0.75s   16.00%      0.89s   19.10%   84.27%  
-  PERF#ASM  GO         31    344.18s    1.16%    344.48s    1.14%   99.91%  
+jobname   stepname  ns       CPU   C-w50   elapsed   e-w50  CPU/ela   vmem  pgin
+PERF#ASM  ASM       31     3.85s   2.99%     4.23s   3.66%   91.02%  2108K     0
+PERF#ASM  LKED      31     0.95s   3.68%     1.16s   4.31%   81.90%   504K     0
+PERF#ASM  GO        31   292.66s   5.08%   293.08s   5.10%   99.86%   120K     0
 ```
 
 showing for each jobname/stepname combination found
 - number of steps seen
-- [median](https://en.wikipedia.org/wiki/Median) value of CPU time
+- median value of CPU time
 - 50% width of CPU time distribution
-- [median](https://en.wikipedia.org/wiki/Median) value of elapsed time
+- median value of elapsed time
 - 50% width of elapsed time distribution
 - ratio of CPU time to elapsed time
+- median value of virtual memory usage
+- median value of page-in's
+
+The [median](https://en.wikipedia.org/wiki/Median) values and 50% width are
+determined from
+[cumulative distribution functions](https://en.wikipedia.org/wiki/Cumulative_distribution_function)
+of the respective quantities and give a
+[robust estimator](https://en.wikipedia.org/wiki/Robust_statistics)
+for the typical behavior.
 
 #### --osum <a name="opt-osum"></a>
 Prints only the job/step summary decribed for the
@@ -143,10 +153,11 @@ default file pattern it is advisable to select file names as `*_J*.prt`.
 
 To get a one line-per-job GO step summary use
 ```
-hercjsu --step=GO --nofile *_J*.prt
+hercjsu --step=GO --cfrac --nofile *_J*.prt
 ```
 which generates output like
 ```
+  jnum  jobname  execname stepname progname  ret-code   cpu-time CPU/ela   vmem
   J6373 TOWH#A60 CLG      GO       GO        RC= 0000    260.46s  99.93%    32K
   J6374 TOWH#ASM CLG      GO       PGM=*.DD  RC= 0000      5.01s 100.00%     8K
   J6375 TOWH#FOG CLG      GO       PGM=*.DD  RC= 0000     15.35s  99.80%    28K
@@ -158,3 +169,7 @@ which generates output like
   J6381 TOWH#PLI CLG      GO       PGM=*.DD  RC= 0000     56.74s  99.91%    48K
   J6382 TOWH#SIM CLG      GO       PGM=*.DD  RC= 0000     34.53s  99.91%  1000K
 ```
+
+### See also <a name="also"></a>
+- [hercjis](hercjis.md) - Hercules Job Input System 
+- [hercjos](hercjos.md) - Hercules Job Output System 

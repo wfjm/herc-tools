@@ -10,6 +10,7 @@
   - [Job Description File](#user-content-jes)
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
+- [See also](#user-content-also)
 
 ### Synopsis <a name="synopsis"></a>
 ```
@@ -241,3 +242,7 @@ To capture the generated job for further usage simply use the
 This can be automatized with `make`, consult this
 [Makefile](https://github.com/wfjm/mvs38j-langtest/blob/master/jobs/Makefile)
 as example.
+
+### See also <a name="also"></a>
+- [hercjos](hercjos.md) - Hercules Job Output System 
+- [hercjsu](hercjsu.md) - Job Summary 
