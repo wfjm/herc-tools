@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 1013 2018-04-28 16:07:34Z mueller $
+# $Id: hercjsu 1014 2018-04-29 15:12:32Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,7 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
-# 2018-04-28  1013   1.2    add -asum and -osum
+# 2018-04-29  1014   1.2    add -asum and -osum
 # 2018-04-13  1010   1.1    add -cfrac option
 # 2018-01-28   991   1.0    Initial version
 # 2017-10-21   957   0.1    First draft
@@ -64,35 +64,40 @@ if (defined $opts{help}) { do_help();  exit 0; }
 # handle input files
 #
 my %stephash;
+if ($opts{nofile}) {
+print '  jnum  jobname  execname stepname progname  ret-code';
+print $opts{cfrac} ? '   cpu-time CPU/ela   vmem' :
+                     '  cpu-time      vmem   pgin';
+print "\n";
+}
 foreach my $fname (@ARGV) {
   do_file($fname);
 }
 
 # handle -asum and -osum
 if ($opts{asum} || $opts{osum}) {
-  print "\n";
-  print "  jobname   stepname   ns        CPU    C-w50    elapsed    e-w50  CPU/ela\n";
+  print "\n" unless $opts{osum};
+  print "jobname   stepname  ns       CPU   C-w50   elapsed   e-w50  CPU/ela" .
+        "   vmem  pgin\n";
   foreach my $steptag (sort keys %stephash) {
     my ($jnam,$stepno,$psnam) = split '\|', $steptag;
-    my @ctimsort = sort @{$stephash{$steptag}{ctim}};
-    my @etimsort = sort @{$stephash{$steptag}{etim}};
-    next unless scalar(@ctimsort) > 0 && scalar(@etimsort) > 0;
 
-    my $ctim_l = df_lookup(\@ctimsort, 0.25);
-    my $ctim_t = df_lookup(\@ctimsort, 0.50);
-    my $ctim_u = df_lookup(\@ctimsort, 0.75);
-    my $etim_l = df_lookup(\@etimsort, 0.25);
-    my $etim_t = df_lookup(\@etimsort, 0.50);
-    my $etim_u = df_lookup(\@etimsort, 0.75);
-    ## printf "+++2a $ctim_l, $ctim_t, $ctim_u\n";
-    ## printf "+++2b $etim_l, $etim_t, $etim_u\n";
-    my $ctim_w = 100.* ($ctim_u - $ctim_l) / $ctim_t;
-    my $etim_w = 100.* ($etim_u - $etim_l) / $etim_t;
-    printf "  %-8s  %-8s  %3d  %8.2fs  %6.2f%%  %8.2fs  %6.2f%%  %6.2f%%  \n",
-      $jnam,$psnam,scalar(@ctimsort),
-      $ctim_t,$ctim_w,
-      $etim_t,$etim_w,
-      100.*$ctim_t/$etim_t;
+    my ($ctim_m,$ctim_w) = getmw($steptag,'ctim');
+    my ($etim_m,$etim_w) = getmw($steptag,'etim');
+    my ($vmem_m,$vmem_w) = getmw($steptag,'vmem');
+    my ($pgin_m,$pgin_w) = getmw($steptag,'pgin');
+
+    my $ns = scalar @{$stephash{$steptag}{ctim}};
+    printf "%-8s  %-8s %3d", $jnam,$psnam,$ns;
+    print defined $ctim_m ? sprintf ' %8.2fs %6.2f%%', $ctim_m,$ctim_w  :
+                                    '         ?       ?';
+    print defined $etim_m ? sprintf ' %8.2fs %6.2f%%', $etim_m,$etim_w  :
+                                    '         ?       ?';
+    print defined $ctim_m && defined $etim_m && $etim_m > 0. ?
+      sprintf '  %6.2f%%',100.*$ctim_m/$etim_m  : '        -';
+    print defined $vmem_m ? sprintf ' %5dK',int($vmem_m+0.5)  : '      -';
+    print defined $pgin_m ? sprintf ' %5d',int($pgin_m+0.5)  : '     -';
+    print "\n";
   }
 }
 
@@ -219,6 +224,8 @@ sub do_file {
     my $steptag = $jnam . '|' . sprintf('%03d',$stepno) . '|' . $sdsc->{psnam};
     push @{$stephash{$steptag}{ctim}}, $ctim if defined $ctim;
     push @{$stephash{$steptag}{etim}}, $etim if defined $etim;
+    push @{$stephash{$steptag}{vmem}},$1 if $sdsc->{vmem} =~ m/^\s*(\d+)K$/;
+    push @{$stephash{$steptag}{pgin}},$1 if $sdsc->{pgin} =~ m/^\s*(\d+)$/;
     $stepno += 1;
   }
 
@@ -257,3 +264,18 @@ sub df_lookup {
   return (1.-$find)*$df->[$ind] + $find*$df->[$ind+1];
 }
 
+#
+# -- getmw: get median and width ---------------------------------------------
+#
+sub getmw {
+  my ($tag,$key) = @_;
+
+  my @dfsort = sort {$a <=> $b} @{$stephash{$tag}{$key}};
+  return (undef,undef) unless scalar @dfsort > 0;
+
+  my $vl = df_lookup(\@dfsort, 0.25);
+  my $vm = df_lookup(\@dfsort, 0.50);
+  my $vu = df_lookup(\@dfsort, 0.75);
+  my $vw = $vm > 0. ? 100.* ($vu - $vl) / $vm : 0.;
+  return ($vm,$vw);
+}
