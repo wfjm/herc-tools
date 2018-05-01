@@ -46,18 +46,20 @@ of files, containing one job each, with naming pattern like
 
 | Option | Description |
 | ------ | :---------- |
-| [-a [nam:]port](#user-content-opt-a) | sockdev address, default localhost:14030 |
+| [-a nam:port](#user-content-opt-a) | sockdev address, default localhost:14030 |
 | [-i file](#user-content-opt-i)     | use `file` as input source |
 | [-p pat](#user-content-opt-p)      | set file name pattern |
 | [-db](#user-content-opt-db)        | drop banner pages |
 | [-dt](#user-content-opt-dt)        | drop trailer pages |
 | [-h](#user-content-opt-h)          | print help text |
 
-#### -a [nam:]port <a name="opt-a"></a>
-hercjos uses as default socket address localhost:14030, often used when
+#### -a nam:port <a name="opt-a"></a>
+hercjos uses as default address localhost:14030, often used when
 the primary printer is setup as a sockdev device.
-The `-a` option allows to specify a different socket address. If only a
-port number is specified `localhost` will be used as host name.
+The `-a` option allows to specify a different address in the formats
+- `port` _(only digits; host defaults to localhost)_
+- `host` _(port defaults to 14030)_
+- `host:port`
 
 #### -i file <a name="opt-i"></a>
 Will use `file` as input source instead of connecting to a sockdev

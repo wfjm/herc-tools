@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjos 994 2018-02-24 13:07:45Z mueller $
+# $Id: hercjos 1015 2018-05-01 09:54:09Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-05-01  1015   1.1.2  BUGFIX: fix -a defaulting logic
 # 2018-02-23   994   1.1.1  Handle ^L^M properly
 # 2018-01-06   986   1.1    Add job counter (for statistics)
 # 2017-09-01   945   1.0    Initial version
@@ -152,7 +153,7 @@ sub do_help {
   print "usage: hercjos [OPTIONS]...\n";
   print "  -h             help text\n";
   print "  -i file        use 'file' as input\n";
-  print "  -a [nam:]port  sockdev address, default localhost:$defiport\n";
+  print "  -a nam:port    sockdev address, default localhost:$defiport\n";
   print "  -db            drop banner pages\n";
   print "  -dt            drop trailer pages\n";
   print "  -p  pat        set filename pattern, default '%D_%J_%N.prt'\n";
@@ -182,7 +183,7 @@ sub open_in {
         $fh = IO::Socket::UNIX->new(Peer => $spec);
       } else {
         if ($spec !~ m/:/) {                # no : found
-          if ($spec =~ m/\d+/) {            # only port
+          if ($spec =~ m/^\d+$/) {          # only port
             $spec = 'localhost:' . $spec;
           } else {                          # only node
             $spec = $spec . ':' . $defiport;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjis 1008 2018-04-07 15:52:03Z mueller $
+# $Id: hercjis 1015 2018-05-01 09:54:09Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-05-01  1015   1.5.1  BUGFIX: fix -a defaulting logic
 # 2018-01-12   988   1.5    add -r option; redo close timout handling
 # 2018-01-04   986   1.4    add -d and -D; change/docu substitution precedence
 # 2017-12-27   977   1.3    add -c option for $CLASS definition shortcut
@@ -181,7 +182,7 @@ sub getopts {
 
 sub do_help {
   print "usage: hercjis [OPTIONS]... [FILE]...\n";
-  print "  -a [nam:]port  sockdev address, default localhost:$defoport\n";
+  print "  -a nam:port    sockdev address, default localhost:$defoport\n";
   print "  -o file        build job(s) and write to 'file'\n";
   print "  -d nam=val     define default for \${nam} substitution\n";
   print "  -D nam=val     define override for \${nam} substitution\n";
@@ -235,7 +236,7 @@ sub open_out {
         $fh = IO::Socket::UNIX->new(Peer => $spec);
       } else {
         if ($spec !~ m/:/) {                # no : found
-          if ($spec =~ m/\d+/) {            # only port
+          if ($spec =~ m/^\d+$/) {          # only port
             $spec = 'localhost:' . $spec;
           } else {                          # only node
             $spec = $spec . ':' . $defoport;

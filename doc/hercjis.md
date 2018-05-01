@@ -139,7 +139,7 @@ project and later factored out into the separate project
 
 | Option | Description |
 | ------ | :---------- |
-| [-a [nam:]port](#user-content-opt-a) | sockdev address, default localhost:3505 |
+| [-a nam:port](#user-content-opt-a) | sockdev address, default localhost:3505 |
 | [-o file](#user-content-opt-o)     | build job(s) and write to `file` |
 | [-d nam=val](#user-content-opt-d)  | define default for ${nam} substitution |
 | [-D nam=val](#user-content-opt-dd) | define override for ${nam} substitution |
@@ -151,11 +151,13 @@ project and later factored out into the separate project
 | [-w ns](#user-content-opt-w)       | wait ns seconds after command |
 | [-h](#user-content-opt-h)          | print help text |
 
-#### -a [nam:]port <a name="opt-a"></a>
-hercjis uses as default socket address for job submission `localhost:3505`,
+#### -a nam:port <a name="opt-a"></a>
+hercjis uses as default address for job submission `localhost:3505`,
 which is the default configuration in [tk4-](http://wotho.ethz.ch/tk4-/).
-The `-a` option allows to specify a different socket address. If only a
-port number is specified `localhost` will be used as host name.
+The `-a` option allows to specify a different address in the formats
+- `port` _(only digits; host defaults to localhost)_
+- `host` _(port defaults to 3505)_
+- `host:port`
 
 #### -o file <a name="opt-o"></a>
 The job output is written to the file `file`. If `file` is specified as `-`
