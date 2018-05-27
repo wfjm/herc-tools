@@ -8,12 +8,12 @@
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
 
-### Synopsis <a name="synopsis"></a>
+### <a id="synopsis">Synopsis</a>
 ```
   hercjsu [OPTIONS]... [FILE]...
 ```
 
-### Description <a name="description"></a>
+### <a id="description">Description</a>
 hercjsu analyses batch job output files and generates compact, one line
 per job step, summaries. Filters allow to select on job names (see
 [--job option](#user-content-opt-job)) or on step names (see
@@ -71,7 +71,7 @@ Note that on system with multiple CPUs, like a dual CPU MVS 3.8J system, the
 CPU time can be larger than the elapsed time, so the ratio be larger than 100%.
 
 
-### Options <a name="options"></a>
+### <a id="options">Options</a>
 
 | Option | Description |
 | ------ | :---------- |
@@ -84,7 +84,7 @@ CPU time can be larger than the elapsed time, so the ratio be larger than 100%.
 | [--osum](#user-content-opt-osum)     | show only job/step average times |
 | [--help](#user-content-opt-help)     | print help text |
 
-#### --job=jname <a name="opt-job"></a>
+#### <a id="opt-job">--job=jname</a>
 `jname` is taken as
 [PERL regular expression](https://perldoc.perl.org/perlre.html),
 only jobs matching `jname` are listed. Examples:
@@ -93,27 +93,27 @@ only jobs matching `jname` are listed. Examples:
   Note that the option argument must be quoted because it contains a
   shell meta character (`#`).
 
-#### --step=sname <a name="opt-step"></a>
+#### <a id="opt-step">--step=sname</a>
 `sname` is taken as
 [PERL regular expression](https://perldoc.perl.org/perlre.html),
 only steps matching `sname` are listed. To select the GO step use
 for example `--step=GO`.
 
-#### --fail <a name="opt-fail"></a>
+#### <a id="opt-fail">--fail</a>
 Selects jobs which have at least one failed step. A job step is considered
 failed when the return code is higher than 4 or an ABEND condition was
 detected.
 
-#### --nofile <a name="opt-nofile"></a>
+#### <a id="opt-nofile">--nofile</a>
 Suppresses the file name header. Is especially useful when the
 [--step option](#user-content-opt-step) is used and results in very
 compact listings.
 
-#### --cfrac <a name="opt-cfrac"></a>
+#### <a id="opt-cfrac">--cfrac</a>
 Show the CPU time in seconds and the CPU/elapsed time ratio and omit the Page-in
 count in the output format.
 
-#### --asum <a name="opt-asum"></a>
+#### <a id="opt-asum">--asum</a>
 Adds at end of output a job/step summary of the format
 ```
 jobname   stepname  ns       CPU   C-w50   elapsed   e-w50  CPU/ela   vmem  pgin
@@ -139,15 +139,15 @@ of the respective quantities and give a
 [robust estimator](https://en.wikipedia.org/wiki/Robust_statistics)
 for the typical behavior.
 
-#### --osum <a name="opt-osum"></a>
+#### <a id="opt-osum">--osum</a>
 Prints only the job/step summary decribed for the
 [-asum option](#user-content-opt-asum), all other output is suppressed.
 
-#### --help <a name="opt-help"></a>
+#### <a id="opt-help">--help</a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
 
-### Usage <a name="usage"></a>
+### <a id="usage">Usage</a>
 When hercjsu is used in conjunction with [hercjos](hercjos.md) with the
 default file pattern it is advisable to select file names as `*_J*.prt`.
 
@@ -170,6 +170,6 @@ which generates output like
   J6382 TOWH#SIM CLG      GO       PGM=*.DD  RC= 0000     34.53s  99.91%  1000K
 ```
 
-### See also <a name="also"></a>
+### <a id="also">See also</a>
 - [hercjis](hercjis.md) - Hercules Job Input System 
 - [hercjos](hercjos.md) - Hercules Job Output System 

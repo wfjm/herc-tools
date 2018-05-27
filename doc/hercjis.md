@@ -12,13 +12,13 @@
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
 
-### Synopsis <a name="synopsis"></a>
+### <a id="synopsis">Synopsis</a>
 ```
   hercjis [OPTIONS]... [FILE]...
 ```
 
-### Description <a name="description"></a>
-#### Overview <a name="overview"></a>
+### <a id="description">Description</a>
+#### <a id="overview">Overview</a>
 hercjis is a preprocessor which allows to generate the complete JCL of a batch
 job from
 - a [job description file](#user-content-jes) holding the information
@@ -34,7 +34,7 @@ but can alternatively be written to file (see [-o option](#user-content-opt-o)).
 hercjis is usually called with one or more job description file, but ready
 to run JCL files can of course also be submitted via hercjis.
 
-#### Preprocessor directives and variable substitution <a name="dirsub"></a>
+#### <a id="dirsub">Preprocessor directives and variable substitution</a>
 The hercjis preprocessor supports the functions
 - inclusion of files
 - definition of variables
@@ -65,7 +65,7 @@ Variables can be defined via five mechanisms, which are listed by precedence
 - [-d option](#user-content-opt-d)
 - `${name:=def}`
 
-#### Job Template File <a name="jesi"></a>
+#### <a id="jesi">Job Template File</a>
 A job template file holds the JCL statements for a given job type.
 Many JCL parameters are represented by hercjis variables with an appropriate
 default so that they can be overridden, if needed, by the
@@ -109,7 +109,7 @@ This project contains a full collection of compiler job templates in the
 for a description consult the
 [README](https://github.com/wfjm/mvs38j-langtest/blob/master/jcl/README.md).
 
-#### Job Description File <a name="jes"></a>
+#### <a id="jes">Job Description File</a>
 A job description file contains the information for a specific job.
 Usually it defines some variables which specify file names or parameters,
 and as last action includes the
@@ -135,7 +135,7 @@ Hercjis was in fact initially developed as part of the mvs38j-langtest
 project and later factored out into the separate project
 [herc-tools](https://github.com/wfjm/herc-tools).
 
-### Options <a name="options"></a>
+### <a id="options">Options</a>
 
 | Option | Description |
 | ------ | :---------- |
@@ -151,7 +151,7 @@ project and later factored out into the separate project
 | [-w ns](#user-content-opt-w)       | wait ns seconds after command |
 | [-h](#user-content-opt-h)          | print help text |
 
-#### -a nam:port <a name="opt-a"></a>
+#### <a id="opt-a">-a nam:port</a>
 hercjis uses as default address for job submission `localhost:3505`,
 which is the default configuration in [tk4-](http://wotho.ethz.ch/tk4-/).
 The `-a` option allows to specify a different address in the formats
@@ -159,34 +159,34 @@ The `-a` option allows to specify a different address in the formats
 - `host` _(port defaults to 3505)_
 - `host:port`
 
-#### -o file <a name="opt-o"></a>
+#### <a id="opt-o">-o file</a>
 The job output is written to the file `file`. If `file` is specified as `-`
 the output is written to `STDOUT`. If multiple input files are specified
 or the [-r option](#user-content-opt-r) is used all jobs will be
 concatenated into one file.
 
-#### -d nam=val <a name="opt-d"></a>
+#### <a id="opt-d">-d nam=val</a>
 Sets the start-up default for variable `nam` to `val`. The variable can later
 of over-written with `##define` statements, `HERCJIS_nam` environment
 variables, or a [-D option](#user-content-opt-dd).
 
-#### -D nam=val <a name="opt-dd"></a>
+#### <a id="opt-dd">-D nam=val</a>
 Will set the variable `nam` to `val` and override all other definitions
 from [-d options](#user-content-opt-dd), `##define` statements, or
 `HERCJIS_nam` environment variables.
 
-#### -c x <a name="opt-c"></a>
+#### <a id="opt-c">-c x</a>
 Is a shortcut for `-D CLASS=x` and useful to setup the job class.
 
-#### -r nn <a name="opt-r"></a>
+#### <a id="opt-r">-r nn</a>
 Will repeat all input files `nn` times.
 
-#### -f <a name="opt-f"></a>
+#### <a id="opt-f">-f</a>
 hercjis runs as a filter, reads input from `STDIN` and send output to `STDOUT`.
 No [-o option](#user-content-opt-o) and no file names are allowed.
 Is equivalent to `hercjis -o - -`.
 
-#### -v <a name="opt-v"></a>
+#### <a id="opt-v">-v</a>
 Will create addition output, written to `STDERR`, which traces all file
 open and close operations and some statistics, like
 ```
@@ -205,7 +205,7 @@ hercjis-I: close ifile 's370_perf_ff.JES'
 hercjis-I send  6833 cards with   20 substitutions
 ```
 
-#### -M <a name="opt-mm"></a>
+#### <a id="opt-mm">-M</a>
 Instead of creating jobs hercjis will output rules suitable for `make`
 describing the dependencies of the input file.
 A [-o option](#user-content-opt-o) must be specified, the file name will
@@ -214,7 +214,7 @@ be used as the name of the make target. Works similar to the `-M` option of
 An example can be found in this
 [Makefile](https://github.com/wfjm/mvs38j-langtest/blob/master/jobs/Makefile).
 
-#### -w ns <a name="opt-w"></a>
+#### <a id="opt-w">-w ns</a>
 hercjis will wait `ns` seconds before exiting. The implementation of
 sockdev devices in Hercules (as distributed with
 [tk4-](http://wotho.ethz.ch/tk4-/)) can exhibit a race condition when
@@ -222,11 +222,11 @@ back-to-back connections to a `sockdev` reader are made, e.g. by a
 sequence of hercjis commands in a script. This options adds some cool-down
 time and avoids these race conditions.
 
-#### -h <a name="opt-h"></a>
+#### <a id="opt-h">-h</a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
 
-### Usage <a name="usage"></a>
+### <a id="usage">Usage</a>
 #### Submit job(s)
 To directly submit a job to a running Hercules system simply call hercjis
 with the name of the job description file as argument. If multiple file name
@@ -245,6 +245,6 @@ This can be automatized with `make`, consult this
 [Makefile](https://github.com/wfjm/mvs38j-langtest/blob/master/jobs/Makefile)
 as example.
 
-### See also <a name="also"></a>
+### <a id="also">See also</a>
 - [hercjos](hercjos.md) - Hercules Job Output System 
 - [hercjsu](hercjsu.md) - Job Summary 

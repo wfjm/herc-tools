@@ -8,12 +8,12 @@
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
 
-### Synopsis <a name="synopsis"></a>
+### <a id="synopsis">Synopsis</a>
 ```
   hercjos [OPTIONS]... 
 ```
 
-### Description <a name="description"></a>
+### <a id="description">Description</a>
 hercjos is yet another sockdev printer for
 [Hercules](https://en.wikipedia.org/wiki/Hercules_(emulator)).
 Simple, open source, and at this point handling only JES2 output
@@ -42,7 +42,7 @@ of files, containing one job each, with naming pattern like
 2018-04-07-12:00:13_S0047_TSO.prt
 ```
 
-### Options <a name="options"></a>
+### <a id="options">Options</a>
 
 | Option | Description |
 | ------ | :---------- |
@@ -53,7 +53,7 @@ of files, containing one job each, with naming pattern like
 | [-dt](#user-content-opt-dt)        | drop trailer pages |
 | [-h](#user-content-opt-h)          | print help text |
 
-#### -a nam:port <a name="opt-a"></a>
+#### <a id="opt-a">-a nam:port</a>
 hercjos uses as default address localhost:14030, often used when
 the primary printer is setup as a sockdev device.
 The `-a` option allows to specify a different address in the formats
@@ -61,11 +61,11 @@ The `-a` option allows to specify a different address in the formats
 - `host` _(port defaults to 14030)_
 - `host:port`
 
-#### -i file <a name="opt-i"></a>
+#### <a id="opt-i">-i file</a>
 Will use `file` as input source instead of connecting to a sockdev
 device. Can be used to convert existing files like `prt00e.txt`.
 
-#### -p pat <a name="opt-p"></a>
+#### <a id="opt-p">-p pat</a>
 Defines the file name pattern used to generate the file names for
 individual jobs. Default is `%D_%J_%N.prt`. The available specifiers are
 
@@ -83,22 +83,22 @@ characters other than letters, digits and `-` are discarded. The pattern
 can contain `/` characters, in that case the job files will be organized
 in directories, which will be created as needed.
 
-#### -db <a name="opt-db"></a>
+#### <a id="opt-db">-db</a>
 Banner pages will no be written to the job output files. Since all
 relevant information contained in the banner page is usually encoded
 already in the file name there is in practice little need to keep them.
 
-#### -dt <a name="opt-dt"></a>
+#### <a id="opt-dt">-dt</a>
 Trailer pages will no be written to the job output files. Since
 trailer pages are fully redundant and serve no purpose after the
 printer stream has been split into job output files there is in
 practice no need to keep them.
 
-#### -h <a name="opt-h"></a>
+#### <a id="opt-h">-h</a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
 
-### Usage <a name="usage"></a>
+### <a id="usage">Usage</a>
 The most common usage in the context of a
 [tk4-](http://wotho.ethz.ch/tk4-/) system is to connect hercjos to the
 default printer `00E`. As first step set this printer up as sockdev device
@@ -127,6 +127,6 @@ hercjos-I: close written   1p,    30l; dropped   2p,    66l
 hercjos-I finished after  1685474 byte,  23677 lines,  516 pages,   48 jobs
 ```
 
-### See also <a name="also"></a>
+### <a id="also">See also</a>
 - [hercjis](hercjis.md) - Hercules Job Input System 
 - [hercjsu](hercjsu.md) - Job Summary 

@@ -6,7 +6,7 @@
 
 <!-- --------------------------------------------------------------------- -->
 ---
-## HEAD <a name="head"></a>
+## <a id="head">HEAD</a>
 ### General Proviso
 The HEAD version shows the current development. No guarantees that software or
 the documentation is consistent.
@@ -16,7 +16,7 @@ the documentation is consistent.
 
 <!-- --------------------------------------------------------------------- -->
 ---
-## 2018-04-29: [V1.00](https://github.com/wfjm/herc-tools/releases/tag/V1.00) - rev 1014(wfjm) <a name="V1.00"></a>
+## <a id="V1.00">2018-04-29: [V1.00](https://github.com/wfjm/herc-tools/releases/tag/V1.00) - rev 1014(wfjm)</a>
 
 ### Summary
 - first release. The release was announced in post [83266](https://groups.yahoo.com/neo/groups/hercules-390/conversations/messages/83266) to Yahoo! group [hercules-390](https://groups.yahoo.com/neo/groups/hercules-390/info).
