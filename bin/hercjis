@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjis 1015 2018-05-01 09:54:09Z mueller $
+# $Id: hercjis 1026 2018-05-27 12:05:23Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-05-27  2026   1.5.2  BUGFIX: allow '_' in ##define names
 # 2018-05-01  1015   1.5.1  BUGFIX: fix -a defaulting logic
 # 2018-01-12   988   1.5    add -r option; redo close timout handling
 # 2018-01-04   986   1.4    add -d and -D; change/docu substitution precedence
@@ -370,7 +371,7 @@ sub do_file {
         next;
 
       } elsif ($dir eq 'define') {          # ##define ---------------
-        if ($val =~ m/^([a-zA-Z][a-zA-Z0-9]*)\s+(.+)/) {
+        if ($val =~ m/^([a-zA-Z][a-zA-Z0-9_]*)\s+(.+)/) {
           $defs_def{$1} = $2;
         } else {
           printf STDERR "hercjis-E: bad ##define '$val', abort\n";
