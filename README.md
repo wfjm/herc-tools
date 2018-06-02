@@ -14,6 +14,7 @@ environment
 - [hercjsu](doc/hercjsu.md) - analyses batch job output files and generates
     compact summaries. Very helpful when a larger number of job outputs
     have to be checked.
+- [hercexport](doc/hercexport.md) -  list and unload to ASCII of a set of DASD
 
 `hercjis` should work with all OS running on Hercules. `hercjos` and `hercjsu`
 handle, at this point, only output from MVS 3.8J systems with the JES2

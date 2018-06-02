@@ -12,6 +12,7 @@ The HEAD version shows the current development. No guarantees that software or
 the documentation is consistent.
 
 ### Summary
+- hercexport: added - list and unload to ASCII of a set of DASD
 - hercjis: BUGFIX: allow '_' in ##define names
 - hercjis,herjos: BUGFIX: fix -a defaulting logic
 

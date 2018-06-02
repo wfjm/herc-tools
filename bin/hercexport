@@ -1,0 +1,175 @@
+#!/usr/bin/perl -w
+# $Id: hercexport 1027 2018-06-02 18:22:05Z mueller $
+#
+# Copyright 2018- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
+#
+# This program is free software; you may redistribute and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3, or at your option any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for complete details.
+#
+#  Revision History:
+# Date         Rev Version  Comment
+# 2018-06-01  1027   0.1    First draft
+#
+#
+
+use 5.14.0;                                 # require Perl 5.14 or higher
+use strict;                                 # require strict checking
+use Getopt::Long;
+use Cwd;
+use Cwd 'abs_path';
+
+my %opts = ();
+
+GetOptions(\%opts, "dst=s",
+           "select=s@","exclude=s@",
+           "dsnl=s","yroffs=s",
+           "flat","all","ls","trace","v","help")
+  or die "bad options";
+
+# handle help
+if (defined $opts{help}) { do_help();  exit 0; }
+
+if ($opts{all}) {
+  $opts{ls} = 1;
+  push @{$opts{select}},'.*';
+}
+$opts{dsnl}   = 40 unless defined $opts{dsnl};
+$opts{yroffs} =  0 unless defined $opts{yroffs};
+
+my $dasdls;
+my $dasdpdsu;
+if (defined $ENV{DASDTOOLS_PATH}) {
+  $dasdls   = $ENV{DASDTOOLS_PATH} . '/dasdls';
+  $dasdpdsu = $ENV{DASDTOOLS_PATH} . '/dasdpdsu';
+} else {
+  $dasdls   = `which dasdls`;
+  $dasdpdsu = `which dasdpdsu`;
+  chomp $dasdls;
+  chomp $dasdpdsu;
+}
+unless ($dasdls ne '' && -e $dasdls) {
+  print "hercexport-F command 'dasdls' not available\n";
+  exit 1;
+}
+unless ($dasdpdsu ne '' && -e $dasdpdsu) {
+  print "hercexport-F command 'dasdpdsu' not available\n";
+  exit 1;
+}
+
+my $dst = $opts{dst} || '.';
+unless (-d $dst) {
+  print "hercexport-F destination directory '$dst' not available\n";
+  exit 1;
+}
+
+my $cwd = getcwd();
+
+foreach my $fname (@ARGV) {
+  do_dasd($fname);
+}
+
+exit 0;
+
+#
+# -- do_help: print help text ------------------------------------------------
+#
+sub do_help {
+  print "usage: hercexport    [OPTIONS]... [FILE]...\n";
+  print "  --dst=odir      output path for exported pds members\n";
+  print "  --select=npat   select pds with names matching npat\n";
+  print "  --exclude=npat  exclude pds with names matching npat\n";
+  print "  --dsnl=n        dataset name length (default 40)\n";
+  print "  --yroffs=n      year offset (default 0)\n";
+  print "  --flat          no per-dasd subfolders\n";
+  print "  --all           short for --ls and --sel='.*'\n";
+  print "  --ls            generate dasd listings\n";
+  print "  --trace         trace dasd+pds names\n";
+  print "  --v             show dasdpdsu output\n";
+  print "  --help          print help text\n";
+  return;
+}
+
+#
+# -- do_dasd: handle input file ----------------------------------------------
+#
+
+sub do_dasd {
+  my ($fname) = @_;
+  #
+  # check readability of dasd container
+  #
+  unless (-r $fname) {
+    print "hercexport-E file '$fname' not readable\n";
+    return;
+  }
+
+  my $vname = $fname;
+  $vname =~ s{.*/}{};              # get bare name, drop path
+
+  #
+  # generate listing, get list of pds
+  #
+
+  printf "dasd: $vname %s\n",('-' x (63-length($vname))) if $opts{trace};
+
+  my @pdslist;
+  my $lsopts = "-caldt -expdt -hdr -dsnl=$opts{dsnl} -yroffs=$opts{yroffs}";
+
+  if ($opts{ls}) {
+    my $ofname = $dst . '/' . $vname . '.log';
+    open OFILE,">$ofname" or die "failed to open $ofname";
+  }
+  open IFILE,"$dasdls $lsopts $fname 2>&1|" or die "failed to dasdls $fname";
+  while (<IFILE>) {
+    chomp;
+    print OFILE "$_\n" if $opts{ls};
+    if (m/^(.*?)\s+.*PO\s+FB\s+80/) {
+      my $dname = $1;
+      my $take = 0;
+      foreach my $pat (@{$opts{select}})  { $take = 1 if $dname =~ m/^$pat$/i;}
+      foreach my $pat (@{$opts{exclude}}) { $take = 0 if $dname =~ m/^$pat$/i;}
+      push @pdslist,$dname if $take;
+    }
+  }
+  close IFILE;
+  close OFILE if $opts{ls};
+
+  return unless scalar(@pdslist) > 0;
+
+  #
+  # finally unload the selected pds
+  #
+  my $fname_abs = abs_path($fname);
+  my $odirvol = $dst;
+  $odirvol .=  '/' . lc($vname) unless $opts{flat};
+  unless (-d $odirvol) {
+    mkdir $odirvol or die "failed to create '$odirvol'";
+  }
+
+  foreach my $pds (@pdslist) {
+    printf "        $pds %s\n",('-' x (51-length($pds))) if $opts{trace};
+    my $pdsclean = $pds;
+    $pdsclean =~ s{[\$\#\?]}{_}g;
+    my $odirpds = $odirvol . '/' . lc($pdsclean);
+    unless (-d $odirpds) {
+      mkdir $odirpds or die "failed to create '$odirpds'";
+    }
+    chdir($odirpds) or die "$!";
+
+    open IFILE,"$dasdpdsu $fname_abs $pds ASCII 2>&1 |" or
+      die "failed to dasdpdsu $fname_abs";
+    while (<IFILE>) {
+      chomp;
+      print "$_\n" if $opts{v};
+    }
+    close IFILE;
+    chdir($cwd);
+  }
+  return;
+}
