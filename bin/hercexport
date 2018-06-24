@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercexport 1027 2018-06-02 18:22:05Z mueller $
+# $Id: hercexport 1031 2018-06-24 06:02:44Z mueller $
 #
 # Copyright 2018- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-06-23  1031   1.0    Initial version
 # 2018-06-01  1027   0.1    First draft
 #
 #
@@ -123,9 +124,15 @@ sub do_dasd {
 
   if ($opts{ls}) {
     my $ofname = $dst . '/' . $vname . '.log';
-    open OFILE,">$ofname" or die "failed to open $ofname";
+    if (not open OFILE,">$ofname") {
+      printf "hercexport-F: failed open $ofname, error %s\n",$!;
+      exit 1;
+    }
   }
-  open IFILE,"$dasdls $lsopts $fname 2>&1|" or die "failed to dasdls $fname";
+  if (not open IFILE,"$dasdls $lsopts $fname 2>&1|") {
+    printf "hercexport-F: failed to start dasdls $fname, error %s\n",$!;
+    exit 1;
+  }
   while (<IFILE>) {
     chomp;
     print OFILE "$_\n" if $opts{ls};
@@ -137,7 +144,11 @@ sub do_dasd {
       push @pdslist,$dname if $take;
     }
   }
-  close IFILE;
+  if (not close IFILE) {
+    my $err = $?;
+    printf "hercexport-E: 'dasdls $lsopts $fname' FAILed with %s\n",
+      prterr($err);
+  }
   close OFILE if $opts{ls};
 
   return unless scalar(@pdslist) > 0;
@@ -149,7 +160,10 @@ sub do_dasd {
   my $odirvol = $dst;
   $odirvol .=  '/' . lc($vname) unless $opts{flat};
   unless (-d $odirvol) {
-    mkdir $odirvol or die "failed to create '$odirvol'";
+    if (not mkdir $odirvol) {
+      printf "hercexport-F: failed to mkdir $odirvol, error %s\n",$!;
+      exit 1;
+    }
   }
 
   foreach my $pds (@pdslist) {
@@ -158,18 +172,46 @@ sub do_dasd {
     $pdsclean =~ s{[\$\#\?]}{_}g;
     my $odirpds = $odirvol . '/' . lc($pdsclean);
     unless (-d $odirpds) {
-      mkdir $odirpds or die "failed to create '$odirpds'";
+      if (not mkdir $odirpds) {
+        printf "hercexport-F: failed to mkdir $odirpds, error %s\n",$!;
+        exit 1;
+      }
     }
-    chdir($odirpds) or die "$!";
+    if (not chdir($odirpds)) {
+      printf "hercexport-F: failed to chdir $odirpds, error %s\n",$!;
+      exit 1;
+    }
 
-    open IFILE,"$dasdpdsu $fname_abs $pds ASCII 2>&1 |" or
-      die "failed to dasdpdsu $fname_abs";
+    if (not open IFILE,"$dasdpdsu $fname_abs $pds ASCII 2>&1 |") {
+      printf "hercexport-F: failed to start dasdpdsu $fname_abs, error %s\n",$!;
+      exit 1;
+    }
     while (<IFILE>) {
       chomp;
       print "$_\n" if $opts{v};
     }
-    close IFILE;
+    if (not close IFILE) {
+      my $err = $?;
+      printf "hercexport-E: 'dasdpdsu $fname_abs $pds ASCII' FAILed with %s\n",
+        prterr($err);
+    }
     chdir($cwd);
   }
   return;
+}
+
+#
+# -- prterr: print error code ----------------------------------------------
+#
+
+sub prterr {
+  my ($err) = @_;
+  return '' unless $err != 0;
+  my $sig  = $err&0x7f;
+  my $core = $err&0x80;
+  my $txt  = sprintf "exit=%03d", $err>>8;
+  $txt .= sprintf ",sig=%03d", $err&0x7f if $err&0xff; # if sig or core
+  $txt .= ',core' if $err&0x80;                        # if core
+
+  return $txt;
 }

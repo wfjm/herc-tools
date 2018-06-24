@@ -25,7 +25,7 @@ configuration distributed with the Turnkey Systems,
 The tools were initially developed in the context of the
 [wfjm/mvs38j-langtest](https://github.com/wfjm/mvs38j-langtest) and
 [wfjm/s370-perf](https://github.com/wfjm/s370-perf) GitHub projects
-which now include to herc-tools as submodules.
+which now include herc-tools as submodules.
 
 ### Directory organization
 The project files are organized in directories as
