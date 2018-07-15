@@ -8,6 +8,7 @@
 - [Options](#user-content-options)
 - [Environment](#user-content-env)
 - [Usage](#user-content-usage)
+- _source code:_ [bin/hercexport](../bin/hercexport)
 
 ### <a id="synopsis">Synopsis</a>
 ```

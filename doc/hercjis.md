@@ -11,6 +11,7 @@
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
+- _source code:_ [bin/hercjis](../bin/hercjis)
 
 ### <a id="synopsis">Synopsis</a>
 ```

@@ -7,6 +7,7 @@
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
+- _source code:_ [bin/hercjos](../bin/hercjos)
 
 ### <a id="synopsis">Synopsis</a>
 ```
