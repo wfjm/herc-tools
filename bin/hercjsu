@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjsu 1014 2018-04-29 15:12:32Z mueller $
+# $Id: hercjsu 1057 2018-10-19 15:06:42Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-10-19  1057   1.3    forward job errors to exit code; add bailout()
 # 2018-04-29  1014   1.2    add -asum and -osum
 # 2018-04-13  1010   1.1    add -cfrac option
 # 2018-01-28   991   1.0    Initial version
@@ -70,8 +71,10 @@ print $opts{cfrac} ? '   cpu-time CPU/ela   vmem' :
                      '  cpu-time      vmem   pgin';
 print "\n";
 }
+
+my $nfail = 0;
 foreach my $fname (@ARGV) {
-  do_file($fname);
+  $nfail += do_file($fname);
 }
 
 # handle -asum and -osum
@@ -101,7 +104,7 @@ if ($opts{asum} || $opts{osum}) {
   }
 }
 
-exit 0;
+exit ($nfail ? 2 : 0);
 
 #
 # -- do_help: print help text ------------------------------------------------
@@ -124,7 +127,7 @@ sub do_help {
 
 sub do_file {
   my ($fname) = @_;
-  open IFILE,"<$fname" or die "failed to open $fname";
+  open(IFILE,"<$fname") or bailout("'$fname' not readable: $!");
 
   my $jnum;
   my $jnam;
@@ -138,13 +141,13 @@ sub do_file {
   unless (defined $jnum && defined $jnam) {
     print "hercjsu-E failed to detect IEF403I in $fname\n";
     close IFILE;
-    return;
+    return 1;
   }
 
   # quit if --job option seen and jobname doesn't match
   if (defined $opts{job} && $jnam !~ m/^$opts{job}$/) {
     close IFILE;
-    return;
+    return 0;
   }
 
   my @steps;
@@ -179,15 +182,12 @@ sub do_file {
 
   my $fail = 0;
   foreach my $sdsc (@steps) {
-    if (defined $opts{fail}) {
-       $fail = 1 if $sdsc->{rcod} ne "RC= 0000" && $sdsc->{rcod} ne "RC= 0004"
-    }
+    $fail = 1 if $sdsc->{rcod} ne "RC= 0000" && $sdsc->{rcod} ne "RC= 0004";
   }
 
-  if (defined $opts{fail} && not $fail) {
-    close IFILE;
-    return;
-  }
+  close IFILE;
+
+  return $fail if (defined $opts{fail} && not $fail);
 
   print "$fname:\n" unless $opts{nofile} || $opts{osum};
 
@@ -229,12 +229,20 @@ sub do_file {
     $stepno += 1;
   }
 
-  close IFILE;
-  return;
+  return $fail;
 }
 
 #
-# -- cnvtime : helper to convert hh:mm:ss,ss into a float
+# -- bailout : end with fatal error ------------------------------------------
+#
+sub bailout {
+  my ($msg) = @_;
+  print STDERR "hercjsu-F: $msg\n";
+  exit 1;
+}
+
+#
+# -- cnvtime : helper to convert hh:mm:ss,ss into a float --------------------
 #
 
 sub cnvtim {

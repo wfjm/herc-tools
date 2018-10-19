@@ -12,8 +12,9 @@ The HEAD version shows the current development. No guarantees that software or
 the documentation is consistent.
 
 ### Summary
-- hercexport: added - list and unload to ASCII of a set of DASD
-- hercjis: BUGFIX: allow '_' in ##define names
+- hercjsu: forward job errors to exit code; add bailout()
+- hercexport: added: list and unload to ASCII of a set of DASD
+- hercjis: BUGFIX: allow '_' in `##define` names
 - hercjis,herjos: BUGFIX: fix -a defaulting logic
 
 <!-- --------------------------------------------------------------------- -->
@@ -22,4 +23,4 @@ the documentation is consistent.
 
 ### Summary
 - first release. The release was announced in post [83266](https://groups.yahoo.com/neo/groups/hercules-390/conversations/messages/83266) to Yahoo! group [hercules-390](https://groups.yahoo.com/neo/groups/hercules-390/info).
-- the hercjis was developed as part of the [mvs38j-langtest](https://github.com/wfjm/mvs38j-langtest) project removed there with the commit [a7372c3](https://github.com/wfjm/mvs38j-langtest/commit/a7372c30823da3fce2c2066d4f2979a6c80f0af8) and moved into this project.
+- the hercjis script was developed as part of the [mvs38j-langtest](https://github.com/wfjm/mvs38j-langtest) project. It was removed from mvs38j-langtest with commit [a7372c3](https://github.com/wfjm/mvs38j-langtest/commit/a7372c30823da3fce2c2066d4f2979a6c80f0af8) and moved into this project.

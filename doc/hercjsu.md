@@ -5,6 +5,7 @@
 - [Synopsis](#user-content-synopsis)
 - [Description](#user-content-description)
 - [Options](#user-content-options)
+- [Exit Status](#user-content-exit)
 - [Usage](#user-content-usage)
 - [See also](#user-content-also)
 - _source code:_ [bin/hercjsu](../bin/hercjsu)
@@ -147,6 +148,13 @@ Prints only the job/step summary decribed for the
 #### <a id="opt-help">--help</a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
+
+### <a id="exit">Exit Status</a>
+
+| Code | Description |
+| ---- | :---------- |
+| 1 | script execution error, e.g. open error on input file |
+| 2 | failed step detected in MVS job output |
 
 ### <a id="usage">Usage</a>
 When hercjsu is used in conjunction with [hercjos](hercjos.md) with the
