@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjos 1015 2018-05-01 09:54:09Z mueller $
+# $Id: hercjos 1061 2018-10-27 17:39:11Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-10-27  1061   1.1.3  add and use bailout()
 # 2018-05-01  1015   1.1.2  BUGFIX: fix -a defaulting logic
 # 2018-02-23   994   1.1.1  Handle ^L^M properly
 # 2018-01-06   986   1.1    Add job counter (for statistics)
@@ -69,8 +70,7 @@ if (defined $opt{'-h'}) { do_help();  exit 0; }
 
 # check whether -p valid
 if ($opt{'-p'} =~ m{^/} || $opt{'-p'}=~ m{/$}) {
-  printf STDERR "hercjos-F filename pattern starts or ends with '/', abort\n";
-  exit 1;
+  bailout("filename pattern starts or ends with '/'");
 }
 
 # open connection to sockdev printer or file
@@ -110,8 +110,7 @@ exit 0;
 #
 
 sub catch_int {
-  printf STDERR "\nhercjos-F aborted with ^C\n";
-  exit 1;
+  bailout("aborted with ^C");
 }
 
 #
@@ -125,24 +124,28 @@ sub getopts {
     my $dsc = $optdsc{$arg};
     if (defined $dsc) {
       if ($dsc > 0) {
-        if (scalar @ARGV == 0) {
-          printf STDERR "hercjos-F missing argument after '$arg', abort\n";
-          exit 1;
-        }
+        bailout("missing argument after '$arg'") if (scalar @ARGV == 0);
         $opt{$arg} = shift @ARGV;
       } else {
         $opt{$arg} = 1;
       }
     } else {
-      printf STDERR "hercjos-F invalid option '$arg', abort\n";
-      exit 1;
+      bailout("invalid option '$arg'");
     }
   }
   if (scalar(@ARGV)) {
-    printf STDERR "hercjos-F invalid additional argument '$ARGV[0]', abort\n";
-    exit 1;
+    bailout("invalid additional argument '$ARGV[0]'");
   }
   return;
+}
+
+#
+# -- bailout : end with fatal error ------------------------------------------
+#
+sub bailout {
+  my ($msg) = @_;
+  print STDERR "hercjos-F: $msg\n";
+  exit 1;
 }
 
 #
@@ -383,8 +386,7 @@ sub open_outnb {
     printf STDERR "hercjos-I: %s '%s'\n", $mode, $fname;
     return $fh;
   }
-  printf STDERR "hercjos-F: failed to open '%s': %s\n", $fname, $!;
-  exit 1;
+  bailout("failed to open for write '$fname': $!");
 }
 
 #

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercjis 1026 2018-05-27 12:05:23Z mueller $
+# $Id: hercjis 1061 2018-10-27 17:39:11Z mueller $
 #
 # Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,7 +14,8 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
-# 2018-05-27  2026   1.5.2  BUGFIX: allow '_' in ##define names
+# 2018-10-27  1061   1.5.3  add and use bailout()
+# 2018-05-27  1026   1.5.2  BUGFIX: allow '_' in ##define names
 # 2018-05-01  1015   1.5.1  BUGFIX: fix -a defaulting logic
 # 2018-01-12   988   1.5    add -r option; redo close timout handling
 # 2018-01-04   986   1.4    add -d and -D; change/docu substitution precedence
@@ -66,33 +67,23 @@ if (defined $opt{'-h'}) { do_help();  exit 0; }
 
 # check that -f has no filenames and no -o option
 if (defined $opt{'-f'} && scalar @ARGV > 0) {
-  printf STDERR "hercjis-E no filenames allowed for -f, abort\n";
-  exit 1;
+  bailout("no filenames allowed for -f");
 }
 if (defined $opt{'-f'} && defined $opt{'-o'}) {
-  printf STDERR "hercjis-E option -o not compatible with -f, abort\n";
-  exit 1;
+  bailout("option -o not compatible with -f");
 }
 if (defined $opt{'-M'} && not defined $opt{'-o'}) {
-  printf STDERR "hercjis-E option -M requires that -o defined too, abort\n";
-  exit 1;
+  bailout("option -M requires that -o defined too");
 }
 
 # handle -r repeat option
 if (defined $opt{'-r'}) {
-  if (scalar @ARGV == 0 ) {
-    printf STDERR "hercjis-E option -r and no file names, abort\n";
-    exit 1;
-  }
+  bailout("option -r and no file names") if (scalar @ARGV == 0);
   foreach my $fname (@ARGV) {
-    if ($fname eq '-') {
-      printf STDERR "hercjis-E option -r and '-' as filename, abort\n";
-      exit 1;
-    }
+    bailout("option -r and '-' as filename") if ($fname eq '-');
   }
   if ($opt{'-r'} !~ m/^\d+$/) {
-    printf STDERR "hercjis-E option -r not followed by positive number, abort\n";
-    exit 1;
+    bailout("option -r not followed by positive number");
   }
   my @al = @ARGV;
   my $rcnt = int $opt{'-r'};
@@ -132,8 +123,7 @@ exit 0;
 #
 
 sub catch_pipe {
-  printf STDERR "hercjis-F write output socket failed, aborted\n";
-  exit 1;
+  bailout("write output socket failed");
 }
 
 #
@@ -148,18 +138,14 @@ sub getopts {
     my $dsc = $optdsc{$arg};
     if (defined $dsc) {
       if ($dsc > 0) {
-        if (scalar @ARGV == 0) {
-          printf STDERR "hercjis-E missing argument after '$arg', abort\n";
-          exit 1;
-        }
+        bailout("missing argument after '$arg'") if (scalar @ARGV == 0);
         if ($arg eq '-d' or $arg eq '-D') {
           my $dsc = shift @ARGV;
           if ($dsc =~ m/^(.*?)=(.*)$/) {
             $defs_cmd{$1} = $2 if $arg eq '-d';
             $defs_ovr{$1} = $2 if $arg eq '-D';
           } else {
-            printf STDERR "hercjis-E -d,-D argument '$dsc' has no '=', abort\n";
-            exit 1;
+            bailout("-d,-D argument '$dsc' has no '='");
           }
         } elsif ($arg eq '-c') {
           $defs_ovr{CLASS} = shift @ARGV;
@@ -170,11 +156,19 @@ sub getopts {
         $opt{$arg} = 1;
       }
     } else {
-      printf STDERR "hercjis-E invalid option '$arg', abort\n";
-      exit 1;
+      bailout("invalid option '$arg'");
     }
   }
   return;
+}
+
+#
+# -- bailout : end with fatal error ------------------------------------------
+#
+sub bailout {
+  my ($msg) = @_;
+  print STDERR "hercjis-F: $msg\n";
+  exit 1;
 }
 
 #

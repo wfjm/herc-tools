@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Id: hercexport 1031 2018-06-24 06:02:44Z mueller $
+# $Id: hercexport 1061 2018-10-27 17:39:11Z mueller $
 #
 # Copyright 2018- by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2018-10-27  1061   1.0.1  add and use bailout()
 # 2018-06-23  1031   1.0    Initial version
 # 2018-06-01  1027   0.1    First draft
 #
@@ -31,7 +32,7 @@ GetOptions(\%opts, "dst=s",
            "select=s@","exclude=s@",
            "dsnl=s","yroffs=s",
            "flat","all","ls","trace","v","help")
-  or die "bad options";
+  or bailout("bad command options");
 
 # handle help
 if (defined $opts{help}) { do_help();  exit 0; }
@@ -76,6 +77,15 @@ foreach my $fname (@ARGV) {
 }
 
 exit 0;
+
+#
+# -- bailout : end with fatal error ------------------------------------------
+#
+sub bailout {
+  my ($msg) = @_;
+  print STDERR "hercexport-F: $msg\n";
+  exit 1;
+}
 
 #
 # -- do_help: print help text ------------------------------------------------

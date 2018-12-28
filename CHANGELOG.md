@@ -2,6 +2,7 @@
 
 ### Table of contents
 - Current [HEAD](#user-content-head)
+- Release [V1.10](#user-content-V1.10)
 - Release [V1.00](#user-content-V1.00)
 
 <!-- --------------------------------------------------------------------- -->
@@ -10,6 +11,10 @@
 ### General Proviso
 The HEAD version shows the current development. No guarantees that software or
 the documentation is consistent.
+
+<!-- --------------------------------------------------------------------- -->
+---
+## <a id="V1.10">2018-12-28: [V1.10](https://github.com/wfjm/herc-tools/releases/tag/V1.10) - rev 1095(wfjm)</a>
 
 ### Summary
 - hercjsu: forward job errors to exit code; add bailout()
