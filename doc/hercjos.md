@@ -6,6 +6,7 @@
 - [Description](#user-content-description)
 - [Options](#user-content-options)
 - [Usage](#user-content-usage)
+- [Bugs](#user-content-bugs)
 - [See also](#user-content-also)
 - _source code:_ [bin/hercjos](../bin/hercjos)
 
@@ -30,6 +31,8 @@ The basic operation is
   [-p option](#user-content-opt-p)) and write the job output into this file,
   the banner and trailer pages can be omitted (see
   [-db](#user-content-opt-db) and [-dt](#user-content-opt-dt) options).
+- run optionally a post-processing command (see
+  [-c](#user-content-opt-c) option)
 
 The net effect is that the printer output stream is split into a set
 of files, containing one job each, with naming pattern like
@@ -52,6 +55,8 @@ of files, containing one job each, with naming pattern like
 | [-p pat](#user-content-opt-p)      | set file name pattern |
 | [-db](#user-content-opt-db)        | drop banner pages |
 | [-dt](#user-content-opt-dt)        | drop trailer pages |
+| [-c](#user-content-opt-c)          | post processing command |
+| [-t](#user-content-opt-t)          | trace input |
 | [-h](#user-content-opt-h)          | print help text |
 
 #### <a id="opt-a">-a nam:port</a>
@@ -76,6 +81,7 @@ individual jobs. Default is `%D_%J_%N.prt`. The available specifiers are
 | %J   | job number in the form Jxxxx, Txxxx, or Sxxxx |
 | %N   | job name |
 | %U   | user name |
+| %R   | room name |
 | %P   | printer name |
 | %D   | date/time in the format yyyy-mm-dd:hh:mm:ss |
 
@@ -95,11 +101,31 @@ trailer pages are fully redundant and serve no purpose after the
 printer stream has been split into job output files there is in
 practice no need to keep them.
 
+#### <a id="opt-c">-c cmd</a>
+Will execute `cmd` for each received job. `cmd` must be a valid shell
+command and will be called with a single argument, the name of the
+job output file. Some job attributes, which were extracted from the
+banner page, are passed as environment variables
+
+| Environment | Spec | Content |
+| ----------- | :--: | ------- |
+| HERCJOS_JOBTYP  | %T   | job type, either JOB, TSO, or STC |
+| HERCJOS_JOBNUM  | %J   | job number in the form Jxxxx, Txxxx, or Sxxxx |
+| HERCJOS_JOBNAM  | %N   | job name |
+| HERCJOS_USER    | %U   | user name |
+| HERCJOS_ROOM    | %R   | room name |
+| HERCJOS_PRINTER | %P   | printer name |
+| HERCJOS_DATE    | %D   | date/time in the format yyyy-mm-dd:hh:mm:ss |
+
+#### <a id="opt-t">-t</a>
+Trace input to `stdout`. Useful for debugging.
+
 #### <a id="opt-h">-h</a>
 Print a brief help text and exit.
 All other options and arguments will be ignored.
 
 ### <a id="usage">Usage</a>
+#### <a id="exa-def">Read from `sockdev`, create per job files without banner</a>
 The most common usage in the context of a
 [tk4-](http://wotho.ethz.ch/tk4-/) system is to connect hercjos to the
 default printer `00E`. As first step set this printer up as sockdev device
@@ -110,8 +136,11 @@ than start hercjos, e.g. like
 ```
   hercjos -db -dt
 ```
-The job files will be written into the current working directory using
-a name pattern setup with the [-p option](#user-content-opt-p).
+The job files will be written into the current working directory without
+the banner and trailer page (due to [-db](#user-content-opt-db) and
+[-dt](#user-content-opt-dt) options). The default file name pattern
+`%D_%J_%N.prt` is used, and can be changed with the
+[-p option](#user-content-opt-p).
 
 Hercjos will print some trace information to STDOUT, like
 ```
@@ -127,6 +156,27 @@ hercjos-I: write '2018-04-07-12:00:13_S0047_TSO.prt'
 hercjos-I: close written   1p,    30l; dropped   2p,    66l
 hercjos-I finished after  1685474 byte,  23677 lines,  516 pages,   48 jobs
 ```
+
+#### <a id="exa-cmd">Post-process file with external command</a>
+When hercjos is started with
+```
+  hercjos -db -dt -c postcmd
+```
+the command `postcmd` will be executed for each received job file. The
+example command
+```
+#!/bin/bash
+echo $1
+printenv | grep HERCJOS_
+```
+will just print the job file name and the job parameters which are
+accessible as environment variables.
+
+### <a id="bugs">Bugs</a>
+Job files are currently closed when the next banner page is detected.
+Post processing commands (see [-c option](#user-content-opt-c) are therefore
+executed when the next job file is received, which could be a considerable
+and confusing delay.
 
 ### <a id="also">See also</a>
 - [hercjis](hercjis.md) - Hercules Job Input System 

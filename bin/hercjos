@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Id: hercjos 1061 2018-10-27 17:39:11Z mueller $
+# $Id: hercjos 1112 2019-02-17 11:10:04Z mueller $
 #
-# Copyright 2017-2018 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
+# Copyright 2017-2019 by Walter F.J. Mueller <W.F.J.Mueller@gsi.de>
 #
 # This program is free software; you may redistribute and/or modify it under
 # the terms of the GNU General Public License as published by the Free
@@ -14,6 +14,7 @@
 #
 #  Revision History:
 # Date         Rev Version  Comment
+# 2019-02-01  1108   1.1.4  add room support; add -c: post command; add -t
 # 2018-10-27  1061   1.1.3  add and use bailout()
 # 2018-05-01  1015   1.1.2  BUGFIX: fix -a defaulting logic
 # 2018-02-23   994   1.1.1  Handle ^L^M properly
@@ -33,13 +34,16 @@ my %optdsc = ('-h'  => 0,                   # print help
               '-a'  => 1,                   # specify sockdev address
               '-db' => 0,                   # drop banner page
               '-dt' => 0,                   # drop trailer page
-              '-p'  => 1                    # specify filename pattern
+              '-p'  => 1,                   # specify filename pattern
+              '-c'  => 1,                   # specify post command
+              '-t'  => 0                    # trace input
              );
 my %opt;
 
 my $defiport = '14030';
 
-my %jobid;
+my %jobid;                                  # banner page properties
+my %cmdid;                                  # post-command properties
 my @page;
 my $npage  = 0;
 my $nline  = 0;
@@ -79,6 +83,13 @@ my $fh_in  = open_in();
 while (<$fh_in>) {
   chomp;
   s/\f\r/\f/;                               # ^L^M --> ^L
+
+  if ($opt{'-t'}) {                         # trace input
+    my $line = $_;
+    $line =~ s/\f/^L/;                      # make ^L visible
+    print "$line\n"
+  }
+
   unless (m/\f/) {                          # no ^L
     do_line($_);
   } else {                                  # ^L seen
@@ -160,6 +171,8 @@ sub do_help {
   print "  -db            drop banner pages\n";
   print "  -dt            drop trailer pages\n";
   print "  -p  pat        set filename pattern, default '%D_%J_%N.prt'\n";
+  print "  -c  cmd        execute 'cmd' for each job\n";
+  print "  -t             trace input on stdout (for debug)\n";
   return;
 }
 
@@ -274,6 +287,7 @@ sub chk_banner {
     my $jobnum_e = substr $line,113,4;
     my $jobnam   = substr $line, 24,8;
     my $prgnam   = substr $line, 34,20;
+    my $roomnm   = substr $line, 61,4;
     my $tim_hr   = substr $line, 67,2;
     my $tim_mi   = substr $line, 70,2;
     my $tim_se   = substr $line, 73,2;
@@ -311,6 +325,7 @@ sub chk_banner {
       $jobid{J} = substr($jobtyp,0,1) . sprintf "%04d",$jobnum;   # %J job number
       $jobid{N} = sanistr($jobnam);                               # %N job name
       $jobid{U} = sanistr($prgnam);                               # %U user name
+      $jobid{R} = sanistr($roomnm);                               # %R room num
       $jobid{P} = sanistr($ptrnam);                               # %P printer
       $jobid{D} = $tim;                                           # %D date/time
 
@@ -325,11 +340,12 @@ sub chk_banner {
 #
 
 sub open_outbp {
+  %cmdid = ();                              # clear post-command props
   # create filename
   $fname = '';
   my $rest = $opt{'-p'};
   while ($rest ne "") {
-    if ($rest =~ m/^(.*?)%([DJNPTU])(.*)$/) {
+    if ($rest =~ m/^(.*?)%([DJNPRTU])(.*)$/) {
       $fname .= $1;
       $rest   = $3;
       my $tag = $2;
@@ -362,6 +378,8 @@ sub open_outbp {
   my $fh = FileHandle->new($fname, '>');
   if (defined $fh) {
     printf STDERR "hercjos-I: %s '%s'\n", $mode, $fname;
+    %cmdid = %jobid;
+    $cmdid{fname} = $fname;
     return $fh;
   } else {
     printf STDERR "hercjos-E: failed to open '%s': %s\n", $fname, $!;
@@ -376,6 +394,7 @@ sub open_outbp {
 #
 
 sub open_outnb {
+  %cmdid = ();                              # clear post-command props
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
   $fname = sprintf "%04d-%02d-%02d-%02d:%02d:%02d-SEQ%04d.prt",
                    $year+1900,$mon+1,$mday,$hour,$min,$sec,$snum;
@@ -404,6 +423,23 @@ sub close_out {
   $nline  = 0;
   $npaged = 0;
   $nlined = 0;
+  if ($opt{'-c'} && exists $cmdid{fname}) {
+    $ENV{HERCJOS_JOBTYP}  = defined $cmdid{T} ? $cmdid{T} : '';
+    $ENV{HERCJOS_JOBNUM}  = defined $cmdid{J} ? $cmdid{J} : '';
+    $ENV{HERCJOS_JOBNAM}  = defined $cmdid{N} ? $cmdid{N} : '';
+    $ENV{HERCJOS_USER}    = defined $cmdid{U} ? $cmdid{U} : '';
+    $ENV{HERCJOS_ROOM}    = defined $cmdid{R} ? $cmdid{R} : '';
+    $ENV{HERCJOS_PRINTER} = defined $cmdid{P} ? $cmdid{P} : '';
+    $ENV{HERCJOS_DATE}    = defined $cmdid{D} ? $cmdid{D} : '';
+    if (open(CMDOUT, "$opt{'-c'} $cmdid{fname}|")) {
+      while (<CMDOUT>) {
+        print $_;
+      }
+      close(CMDOUT);
+    } else {
+      printf STDERR "hercjos-E: failed to execute $opt{'-c'}: $!\n"
+    }
+  }
   return;
 }
 

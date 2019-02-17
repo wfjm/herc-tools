@@ -12,6 +12,12 @@
 The HEAD version shows the current development. No guarantees that software or
 the documentation is consistent.
 
+### Summary
+- hercjos
+  - banner page ROOM name field now accessible via %R
+  - add -c option (job output post processing script)
+  - add -t (trace)
+
 <!-- --------------------------------------------------------------------- -->
 ---
 ## <a id="V1.10">2018-12-28: [V1.10](https://github.com/wfjm/herc-tools/releases/tag/V1.10) - rev 1095(wfjm)</a>
